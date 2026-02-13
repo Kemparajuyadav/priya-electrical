@@ -1,0 +1,434 @@
+import React, { useState, useRef } from 'react';
+import { 
+  LayoutDashboard, 
+  Package, 
+  Users, 
+  FileText, 
+  Plus, 
+  Calculator, 
+  Truck, 
+  CheckCircle, 
+  Zap, 
+  ChevronDown, 
+  Info, 
+  Layers, 
+  BarChart3, 
+  ReceiptText,
+  Printer,
+  X,
+  ShoppingBag,
+  Phone,
+  User
+} from 'lucide-react';
+
+const App = () => {
+  const [view, setView] = useState('home');
+  const [userRole, setUserRole] = useState('public');
+  
+  // Data States
+  const [orders, setOrders] = useState([
+    { id: "PE-101", customer: "Amit Sharma", phone: "9876543210", projectType: "Industrial Wiring", status: "Processing", amount: 450000 },
+    { id: "PE-102", customer: "KV Residency", phone: "9988776655", projectType: "Smart Home", status: "Completed", amount: 210000 }
+  ]);
+
+  const [sourcingInquiries, setSourcingInquiries] = useState([
+    { id: "SRC-01", name: "Rahul", phone: "9000011111", item: "Copper Wires 50m", date: "2023-11-12" }
+  ]);
+
+  // Calculator State
+  const [calcData, setCalcData] = useState({ amount: 1000000, percentage: 8 });
+  const calcResult = (Number(calcData.amount) * Number(calcData.percentage)) / 100;
+
+  // Invoice State
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    clientName: '',
+    description: 'Electrical Consultancy & Materials',
+    amount: 0,
+    gstRate: 18
+  });
+
+  const handleOrderRequest = (e) => {
+    e.preventDefault();
+    const d = new FormData(e.target);
+    const newOrder = {
+      id: `PE-${Math.floor(Math.random() * 9000) + 1000}`,
+      customer: d.get('name'),
+      phone: d.get('phone'),
+      projectType: d.get('type'),
+      status: "Requested",
+      amount: 0
+    };
+    setOrders([newOrder, ...orders]);
+    setView('tracking');
+    e.target.reset();
+  };
+
+  const handleSourcing = (e) => {
+    e.preventDefault();
+    const d = new FormData(e.target);
+    const newInquiry = {
+      id: `SRC-${Math.floor(Math.random() * 900) + 100}`,
+      name: d.get('name'),
+      phone: d.get('phone'),
+      item: d.get('material'),
+      date: new Date().toLocaleDateString()
+    };
+    setSourcingInquiries([newInquiry, ...sourcingInquiries]);
+    setView('home');
+    alert("Material offer submitted to separate Sourcing Storage.");
+  };
+
+  const printInvoice = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* HORIZONTAL NAVIGATION */}
+      <nav className="bg-blue-900 text-white sticky top-0 z-50 shadow-md print:hidden">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-20">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
+            <div className="w-10 h-10 bg-amber-400 rounded-lg flex items-center justify-center text-blue-900">
+              <Zap size={24} fill="currentColor"/>
+            </div>
+            <h1 className="text-xl font-black tracking-tight uppercase">Priya Electricals</h1>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1 font-medium text-sm">
+            <button onClick={() => setView('home')} className={`px-4 py-2 rounded-full transition ${view === 'home' ? 'bg-blue-800 text-amber-400' : 'hover:bg-blue-800'}`}>Products</button>
+            <button onClick={() => setView('tracking')} className={`px-4 py-2 rounded-full transition ${view === 'tracking' ? 'bg-blue-800 text-amber-400' : 'hover:bg-blue-800'}`}>Track Orders</button>
+            <button onClick={() => setView('about')} className={`px-4 py-2 rounded-full transition ${view === 'about' ? 'bg-blue-800 text-amber-400' : 'hover:bg-blue-800'}`}>About Us</button>
+            <button onClick={() => setView('calc')} className={`px-4 py-2 rounded-full transition ${view === 'calc' ? 'bg-blue-800 text-amber-400' : 'hover:bg-blue-800'}`}>Tools</button>
+            <div className="w-px h-6 bg-blue-700 mx-2"></div>
+            <button onClick={() => {setView('admin'); setUserRole('admin')}} className={`px-4 py-2 rounded-full transition font-bold ${view === 'admin' ? 'bg-amber-400 text-blue-900' : 'bg-blue-700 hover:bg-blue-600'}`}>Priya Login</button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-6 py-10 print:p-0">
+        
+        {/* ABOUT SECTION */}
+        {view === 'about' && (
+          <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-500">
+            <div className="text-center">
+              <h2 className="text-4xl font-black text-blue-900 mb-4 tracking-tight uppercase">Company Overview</h2>
+              <p className="text-slate-500 max-w-2xl mx-auto">Providing high-quality electrical engineering solutions since 2018.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <div className="bg-white p-8 rounded-3xl border shadow-sm">
+                <BarChart3 className="mx-auto mb-4 text-blue-600" size={32} />
+                <p className="text-3xl font-black text-slate-900">₹4.2 Cr+</p>
+                <p className="text-sm font-bold text-slate-400 uppercase">Gross Turnover</p>
+              </div>
+              <div className="bg-white p-8 rounded-3xl border shadow-sm">
+                <Package className="mx-auto mb-4 text-amber-500" size={32} />
+                <p className="text-3xl font-black text-slate-900">120+</p>
+                <p className="text-sm font-bold text-slate-400 uppercase">Products Made</p>
+              </div>
+              <div className="bg-white p-8 rounded-3xl border shadow-sm">
+                <Users className="mx-auto mb-4 text-green-500" size={32} />
+                <p className="text-3xl font-black text-slate-900">85+</p>
+                <p className="text-sm font-bold text-slate-400 uppercase">Active Clients</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-900 text-white p-10 rounded-3xl flex flex-col md:flex-row gap-10">
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold mb-4 text-amber-400">Our Products</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3"><CheckCircle size={18} className="text-amber-400"/> Power Distribution Panels</li>
+                  <li className="flex items-center gap-3"><CheckCircle size={18} className="text-amber-400"/> Industrial Control Systems</li>
+                  <li className="flex items-center gap-3"><CheckCircle size={18} className="text-amber-400"/> Solar Power Converters</li>
+                  <li className="flex items-center gap-3"><CheckCircle size={18} className="text-amber-400"/> HV/LV Line Materials</li>
+                </ul>
+              </div>
+              <div className="flex-1 border-l border-blue-800 pl-0 md:pl-10">
+                <h3 className="text-2xl font-bold mb-4 text-amber-400">Client Base</h3>
+                <p className="text-blue-100">We serve major industrial zones, housing societies, and government infrastructure projects. 92% of our clients place repeat orders annually.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TOOLS & PDF SECTION */}
+        {view === 'calc' && (
+          <div className="max-w-5xl mx-auto space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* PERC CALCULATOR */}
+              <div className="bg-white p-8 rounded-3xl border shadow-lg">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-900"><Calculator size={24}/> Percentage Calculator</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Base Amount (₹)</label>
+                    <input 
+                      type="number" 
+                      value={calcData.amount}
+                      onChange={(e) => setCalcData({...calcData, amount: e.target.value})}
+                      className="w-full bg-slate-50 border p-4 rounded-xl text-xl font-bold" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Percentage (%)</label>
+                    <input 
+                      type="number" 
+                      value={calcData.percentage}
+                      onChange={(e) => setCalcData({...calcData, percentage: e.target.value})}
+                      className="w-full bg-slate-50 border p-4 rounded-xl text-xl font-bold" 
+                    />
+                  </div>
+                  <div className="p-6 bg-blue-900 text-white rounded-2xl">
+                    <p className="text-xs font-bold text-blue-300 uppercase mb-1">Calculated Margin:</p>
+                    <p className="text-4xl font-black">₹{calcResult.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* GST BILL GENERATOR */}
+              <div className="bg-white p-8 rounded-3xl border shadow-lg">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-900"><ReceiptText size={24}/> Create GST Bill</h3>
+                <div className="space-y-4">
+                  <input 
+                    className="w-full bg-slate-50 border p-4 rounded-xl" 
+                    placeholder="Client Name" 
+                    onChange={(e) => setInvoiceForm({...invoiceForm, clientName: e.target.value})}
+                  />
+                  <input 
+                    className="w-full bg-slate-50 border p-4 rounded-xl" 
+                    placeholder="Description of Work" 
+                    onChange={(e) => setInvoiceForm({...invoiceForm, description: e.target.value})}
+                  />
+                  <div className="flex gap-2">
+                    <input 
+                      type="number"
+                      className="flex-1 bg-slate-50 border p-4 rounded-xl" 
+                      placeholder="Amount (₹)" 
+                      onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                    />
+                    <select 
+                      className="bg-slate-50 border px-4 rounded-xl font-bold"
+                      onChange={(e) => setInvoiceForm({...invoiceForm, gstRate: Number(e.target.value)})}
+                    >
+                      <option value="18">18% GST</option>
+                      <option value="12">12% GST</option>
+                      <option value="5">5% GST</option>
+                    </select>
+                  </div>
+                  <button 
+                    onClick={() => setShowInvoicePreview(true)}
+                    className="w-full bg-amber-400 text-blue-900 font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-amber-500 transition"
+                  >
+                    GENERATE PDF INVOICE
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INVOICE MODAL PREVIEW */}
+        {showInvoicePreview && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:p-0 print:bg-white print:relative">
+            <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative print:shadow-none print:max-h-none print:rounded-none">
+              
+              {/* Modal Controls */}
+              <div className="sticky top-0 bg-slate-100 p-4 flex justify-between items-center print:hidden">
+                <span className="font-bold text-blue-900">Invoice Preview</span>
+                <div className="flex gap-2">
+                  <button onClick={printInvoice} className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold"><Printer size={18}/> Print / Save PDF</button>
+                  <button onClick={() => setShowInvoicePreview(false)} className="bg-white text-slate-600 p-2 rounded-lg border hover:bg-slate-200"><X size={20}/></button>
+                </div>
+              </div>
+
+              {/* THE INVOICE CONTENT */}
+              <div className="p-12 text-slate-900">
+                <div className="flex justify-between items-start border-b-2 border-blue-900 pb-8 mb-8">
+                  <div>
+                    <h1 className="text-3xl font-black text-blue-900 uppercase">Priya Electricals</h1>
+                    <p className="text-sm font-bold text-slate-500">Infrastructure & Engineering Solutions</p>
+                    <p className="text-xs text-slate-400 mt-2">GSTIN: 27AAAPP0000A1Z5</p>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-2xl font-bold text-slate-300">TAX INVOICE</h2>
+                    <p className="text-sm font-bold mt-1">Invoice #: {Math.floor(1000 + Math.random() * 9000)}</p>
+                    <p className="text-sm">Date: {new Date().toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div className="mb-10">
+                  <h3 className="text-xs font-black text-slate-400 uppercase mb-1 tracking-widest">Bill To:</h3>
+                  <p className="text-xl font-bold">{invoiceForm.clientName || 'Valued Client'}</p>
+                </div>
+
+                <table className="w-full mb-10">
+                  <thead>
+                    <tr className="bg-slate-50 text-left border-b border-slate-200">
+                      <th className="py-4 px-2 text-xs font-black uppercase">Description</th>
+                      <th className="py-4 px-2 text-right text-xs font-black uppercase">Tax Rate</th>
+                      <th className="py-4 px-2 text-right text-xs font-black uppercase">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="py-6 px-2 align-top">
+                        <p className="font-bold">{invoiceForm.description || 'Service/Product Charges'}</p>
+                      </td>
+                      <td className="py-6 px-2 text-right font-medium">{invoiceForm.gstRate}%</td>
+                      <td className="py-6 px-2 text-right font-bold">₹{Number(invoiceForm.amount).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="flex justify-end">
+                  <div className="w-64 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-bold uppercase">Subtotal:</span>
+                      <span className="font-bold">₹{Number(invoiceForm.amount).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-bold uppercase">GST ({invoiceForm.gstRate}%):</span>
+                      <span className="font-bold">₹{((Number(invoiceForm.amount) * invoiceForm.gstRate) / 100).toLocaleString()}</span>
+                    </div>
+                    <div className="h-px bg-slate-200"></div>
+                    <div className="flex justify-between text-xl">
+                      <span className="font-black text-blue-900 uppercase">Total:</span>
+                      <span className="font-black text-blue-900">₹{(Number(invoiceForm.amount) + (Number(invoiceForm.amount) * invoiceForm.gstRate / 100)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-20 pt-10 border-t border-slate-100 text-[10px] text-slate-400 flex justify-between">
+                  <div className="max-w-xs">
+                    <p className="font-bold mb-1">Terms & Conditions:</p>
+                    <p>1. Payments are due within 15 days of invoice date.</p>
+                    <p>2. Goods once sold will not be taken back.</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-32 h-1 bg-slate-200 mb-2"></div>
+                    <p className="font-bold text-slate-900">Authorised Signatory</p>
+                    <p>Priya Electricals</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HOME / PRODUCTS VIEW */}
+        {view === 'home' && (
+          <div className="space-y-12">
+            <div className="bg-blue-900 rounded-[2.5rem] p-12 text-white relative overflow-hidden shadow-2xl">
+              <h2 className="text-5xl font-black mb-4">Quality Power Solutions.</h2>
+              <p className="text-blue-200 text-lg mb-8 max-w-lg">Industrial grade electrical components and professional engineering services for any scale.</p>
+              <div className="flex gap-4">
+                <button onClick={() => setView('calc')} className="bg-amber-400 text-blue-900 px-8 py-3 rounded-xl font-bold hover:scale-105 transition">Explore Tools</button>
+                <button onClick={() => setView('sourcing')} className="bg-white/10 px-8 py-3 rounded-xl font-bold hover:bg-white/20 transition border border-white/20">Material Offerings</button>
+              </div>
+            </div>
+
+            <section>
+              <h3 className="text-2xl font-bold mb-8 flex items-center gap-3"><ShoppingBag className="text-blue-900"/> Featured Products</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <ProductCard name="Control Panel" price="₹45,000" />
+                <ProductCard name="Solar Converter" price="₹12,800" />
+                <ProductCard name="HV Switchgear" price="₹89,500" />
+                <ProductCard name="LED High Bay" price="₹2,400" />
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* SOURCING STORAGE VIEW */}
+        {view === 'sourcing' && (
+          <div className="max-w-xl mx-auto">
+            <h2 className="text-3xl font-black mb-8 text-center text-blue-900">SUPPLY MATERIAL</h2>
+            <div className="bg-white p-10 rounded-3xl shadow-xl border">
+              <form onSubmit={handleSourcing} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Your Name</label>
+                  <input name="name" required className="w-full bg-slate-50 border p-4 rounded-xl" placeholder="Full Name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Contact Number</label>
+                  <input name="phone" required className="w-full bg-slate-50 border p-4 rounded-xl" placeholder="9876543210" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Material to Sell</label>
+                  <textarea name="material" required className="w-full bg-slate-50 border p-4 rounded-xl h-32" placeholder="Describe the materials and quantity..."></textarea>
+                </div>
+                <button type="submit" className="w-full bg-blue-900 text-white font-black py-4 rounded-xl hover:bg-blue-800 transition shadow-lg">Submit Offer</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ADMIN VIEW */}
+        {view === 'admin' && (
+          <div className="space-y-10">
+            <h2 className="text-3xl font-black text-blue-900">PRIYA'S MANAGEMENT CONSOLE</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 bg-white rounded-3xl border shadow-sm overflow-hidden">
+                <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
+                  <h3 className="font-bold flex items-center gap-2 text-blue-900"><Truck size={18}/> Project Orders</h3>
+                </div>
+                <div className="p-0 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100 text-[10px] font-black uppercase text-slate-500">
+                      <tr>
+                        <th className="p-4 text-left">Client</th>
+                        <th className="p-4 text-left">Project</th>
+                        <th className="p-4 text-right">Value (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {orders.map(o => (
+                        <tr key={o.id}>
+                          <td className="p-4 font-bold">{o.customer}</td>
+                          <td className="p-4 text-slate-500">{o.projectType}</td>
+                          <td className="p-4 text-right font-black">₹{o.amount.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="bg-white rounded-3xl border shadow-sm h-fit overflow-hidden">
+                <div className="p-6 bg-amber-50 border-b">
+                  <h3 className="font-bold text-amber-800 flex items-center gap-2"><Package size={18}/> Sourcing Data</h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  {sourcingInquiries.map(s => (
+                    <div key={s.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm">
+                      <p className="font-black text-blue-900">{s.name}</p>
+                      <p className="text-slate-500 mb-2">{s.item}</p>
+                      <p className="text-xs font-bold text-slate-400">{s.phone} | {s.date}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      <footer className="mt-20 border-t bg-white py-12 px-6 print:hidden">
+        <div className="max-w-7xl mx-auto flex justify-between items-center opacity-50">
+          <p className="font-bold text-blue-900">PRIYA ELECTRICALS GROUP</p>
+          <p className="text-xs">© 2024 Engineering Better Infrastructure.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+const ProductCard = ({ name, price }) => (
+  <div className="bg-white p-6 rounded-3xl border border-slate-200 hover:shadow-xl transition-all">
+    <div className="w-full aspect-square bg-slate-100 rounded-2xl mb-4 flex items-center justify-center text-4xl">⚡</div>
+    <h4 className="font-bold text-slate-800">{name}</h4>
+    <p className="text-blue-600 font-black text-lg mt-2">{price}</p>
+  </div>
+);
+
+export default App;
