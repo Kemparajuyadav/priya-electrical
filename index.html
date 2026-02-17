@@ -3,227 +3,621 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Priya Electrical | Industrial Vendor</title>
+    <title>PriyaElectrical - Industrial Electrical Solutions</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printable-bill, #printable-bill * { visibility: visible; }
+            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
-
+    
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
+        const { Zap, Phone, Mail, Trash2, Clock, CheckCircle, Calculator, Factory, ChevronRight, Cpu, ShieldCheck, Wind, Lightbulb, Truck, Printer, X, Download } = lucide;
 
-        // --- ORIGINAL LOGIC WITH GITHUB FALLBACK ---
-        let firebaseConfig;
-        try {
-            // This tries to use your original "backend" method
-            firebaseConfig = JSON.parse(__firebase_config);
-        } catch (e) {
-            // This is the "Correct" way for GitHub Pages: Put your real keys here!
-            firebaseConfig = {
-                apiKey: "YOUR_API_KEY",
-                authDomain: "YOUR_PROJECT.firebaseapp.com",
-                projectId: "YOUR_PROJECT_ID",
-                storageBucket: "YOUR_PROJECT.appspot.com",
-                messagingSenderId: "YOUR_SENDER_ID",
-                appId: "YOUR_APP_ID"
-            };
-        }
-
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const DATABASE_ID = 'priya-electrical-v2';
-
-        // Helper for icons
-        const Icon = ({ name, className = "w-5 h-5" }) => {
-            useEffect(() => { lucide.createIcons(); }, []);
-            return <i data-lucide={name} className={className}></i>;
-        };
+        // Mock Firebase service (replace with real Firebase if deploying)
+        const mockOrders = [];
+        const mockMaterials = [];
 
         function App() {
-            const [user, setUser] = useState(null);
+            const [user, setUser] = useState({ uid: 'demo-user' });
             const [view, setView] = useState('home');
-            const [orders, setOrders] = useState([]);
-            const [materials, setMaterials] = useState([]);
+            const [orders, setOrders] = useState(mockOrders);
+            const [materials, setMaterials] = useState(mockMaterials);
             const [isAdmin, setIsAdmin] = useState(false);
 
-            useEffect(() => {
-                auth.signInAnonymously().catch(console.error);
-                auth.onAuthStateChanged(setUser);
-            }, []);
-
-            useEffect(() => {
-                if (!user) return;
-                // EXACT path from your original logic
-                const docRef = db.collection('artifacts').doc(DATABASE_ID).collection('public').doc('data');
-                
-                const unsubO = docRef.collection('orders').onSnapshot(s => setOrders(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                const unsubM = docRef.collection('materials').onSnapshot(s => setMaterials(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                
-                return () => { unsubO(); unsubM(); };
-            }, [user]);
-
-            // YOUR ORIGINAL SUBMIT LOGIC
             const handleSubmit = async (data, type) => {
-                const col = type === 'material' ? 'materials' : 'orders';
-                await db.collection('artifacts').doc(DATABASE_ID).collection('public').doc('data').collection(col).add({
+                const newItem = {
+                    id: Date.now(),
                     ...data,
                     userId: user.uid,
                     status: 'pending',
                     timestamp: new Date().toISOString()
-                });
+                };
+                if (type === 'material') {
+                    setMaterials([...materials, newItem]);
+                } else {
+                    setOrders([...orders, newItem]);
+                }
                 setView('track');
+                alert('Request submitted successfully!');
+            };
+
+            const updateStatus = (id, status, type) => {
+                if (type === 'material') {
+                    setMaterials(materials.map(m => m.id === id ? { ...m, status } : m));
+                } else {
+                    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+                }
+            };
+
+            const handleDelete = (id, type) => {
+                if (type === 'material') {
+                    setMaterials(materials.filter(m => m.id !== id));
+                } else {
+                    setOrders(orders.filter(o => o.id !== id));
+                }
             };
 
             return (
-                <div className="min-h-screen font-sans text-slate-900">
-                    <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50">
-                        <div className="flex items-center gap-2" onClick={() => setView('home')}>
-                            <div className="bg-blue-600 p-1 rounded text-white"><Icon name="zap" /></div>
-                            <h1 className="text-xl font-bold">PriyaElectrical</h1>
-                        </div>
-                        <div className="hidden md:flex gap-6 text-sm font-semibold">
-                            <button onClick={() => setView('home')}>Home</button>
-                            <button onClick={() => setView('about')}>About</button>
-                            <button onClick={() => setView('quote')}>Get Quote</button>
-                            <button onClick={() => setView('material')}>Materials</button>
-                            <button onClick={() => setView('track')}>Track</button>
-                        </div>
-                        <button onClick={() => setIsAdmin(!isAdmin)} className="bg-black text-white px-4 py-2 rounded-full text-xs">
-                            {isAdmin ? 'Exit' : 'Admin'}
-                        </button>
-                    </nav>
+                <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+                    <nav className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+          <div className="bg-blue-600 p-1.5 rounded-lg shadow-blue-200 shadow-lg">
+            <Zap className="text-white w-5 h-5" />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
+            Priya<span className="text-blue-600">Electrical</span>
+          </h1>
+        </div>
+        
+        <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
+          <button onClick={() => setView('home')} className={`hover:text-blue-600 transition-colors ${view === 'home' ? 'text-blue-600' : ''}`}>Home</button>
+          <button onClick={() => setView('about')} className={`hover:text-blue-600 transition-colors ${view === 'about' ? 'text-blue-600' : ''}`}>About</button>
+          <button onClick={() => setView('quote')} className={`hover:text-blue-600 transition-colors ${view === 'quote' ? 'text-blue-600' : ''}`}>Get Quote</button>
+          <button onClick={() => setView('material')} className={`hover:text-blue-600 transition-colors ${view === 'material' ? 'text-blue-600' : ''}`}>Raw Materials</button>
+          <button onClick={() => setView('track')} className={`hover:text-blue-600 transition-colors ${view === 'track' ? 'text-blue-600' : ''}`}>Track</button>
+        </div>
 
-                    <main className="max-w-7xl mx-auto p-6">
-                        {isAdmin ? (
-                            <AdminPanel orders={orders} materials={materials} db={db} dbId={DATABASE_ID} />
-                        ) : (
-                            <React.Fragment>
-                                {view === 'home' && <Home setView={setView} />}
-                                {view === 'about' && <About />}
-                                {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
-                                {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
-                                {view === 'track' && <Tracking orders={orders} materials={materials} />}
-                            </React.Fragment>
-                        )}
-                    </main>
+        <button 
+          onClick={() => setIsAdmin(!isAdmin)} 
+          className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md"
+        >
+          {isAdmin ? 'Exit Panel' : 'Admin Login'}
+        </button>
+      </nav>
+
+      <main className="max-w-7xl mx-auto p-4 md:p-8">
+        {isAdmin ? (
+          <AdminPanel orders={orders} materials={materials} onUpdate={updateStatus} onDelete={handleDelete} />
+        ) : (
+          <>
+            {view === 'home' && <Home setView={setView} />}
+            {view === 'about' && <About />}
+            {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
+            {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
+            {view === 'track' && <Tracking orders={orders} materials={materials} />}
+          </>
+        )}
+      </main>
+        </div>
+      );
+    }
+  }
+
+  const style = document.createElement('style');
+  style.innerHTML = `
+    @media print {
+      body * { visibility: hidden; }
+      #printable-bill, #printable-bill * { visibility: visible; }
+      #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+      .no-print { display: none !important; }
+    }
+  `;
+  document.head.appendChild(style);
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+  const expertises = [
+    { 
+      name: "HT/LT Cables", 
+      desc: "Specialized high-tension industrial wiring for power grids.",
+      img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800",
+      icon: <Zap size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Solar Systems", 
+      desc: "End-to-end solar EPC solutions and infrastructure components.",
+      img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800",
+      icon: <Wind size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Industrial Raw Materials", 
+      desc: "Bulk supply of copper, aluminum, and electrical insulators.",
+      img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800",
+      icon: <Factory size={20} />,
+      link: 'material'
+    },
+    { 
+      name: "Smart Automation", 
+      desc: "PLC systems and intelligent switchgear for factories.",
+      img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800",
+      icon: <Cpu size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Safety Infrastructure", 
+      desc: "Circuit breakers and earthing materials for large plants.",
+      img: "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=800",
+      icon: <ShieldCheck size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Logistics Support", 
+      desc: "Fast-tracked delivery for critical electrical components.",
+      img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800",
+      icon: <Truck size={20} />,
+      link: 'material'
+    }
+  ];
+
+  return (
+    <div className="space-y-16 animate-in fade-in duration-700">
+      <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <img 
+          src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" 
+          className="absolute inset-0 w-full h-full object-cover scale-105" 
+          alt="Main Banner" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
+          <div className="max-w-3xl">
+            <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full font-bold text-xs tracking-widest uppercase border border-blue-500/30 mb-6 inline-block">Professional Solutions</span>
+            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-[1.1]">
+              Pioneering Modern <span className="text-blue-500">Power</span> Grids.
+            </h2>
+            <p className="text-slate-200 text-xl max-w-xl mb-10 font-medium leading-relaxed">
+              Premium industrial electrical vendor specializing in large-scale infrastructure and high-quality raw material procurement.
+            </p>
+            <div className="flex flex-wrap gap-5">
+              <button onClick={() => setView('quote')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/40 flex items-center gap-2">Get A Free Quote <ChevronRight size={18}/></button>
+              <button onClick={() => setView('about')} className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-bold hover:bg-white/20 transition-all">Our Company Profile</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-10">
+        <div className="text-center mb-16 space-y-3">
+          <h3 className="text-3xl md:text-4xl font-black text-slate-800">Industrial Expertise</h3>
+          <p className="text-slate-500 max-w-2xl mx-auto">We provide specialized services across the entire electrical spectrum, from heavy-duty raw material sourcing to smart grid implementation.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {expertises.map((i, idx) => (
+            <div key={idx} className="group bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full hover:-translate-y-2">
+              <div className="relative h-60 overflow-hidden">
+                <img src={i.img} alt={i.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-3 rounded-2xl text-blue-600 shadow-lg">
+                  {i.icon}
                 </div>
-            );
-        }
+              </div>
+              <div className="p-8 flex flex-col flex-grow">
+                <h3 className="text-2xl font-bold mb-3 text-slate-800 group-hover:text-blue-600 transition-colors">{i.name}</h3>
+                <p className="text-slate-500 text-sm mb-8 leading-relaxed flex-grow">{i.desc}</p>
+                <button 
+                  onClick={() => setView(i.link)} 
+                  className="flex items-center gap-2 text-blue-600 font-extrabold text-sm group/btn"
+                >
+                  Learn More <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
 
-        // --- COMPONENTS (YOUR ORIGINAL UI) ---
+function About() {
+  return (
+    <div className="max-w-5xl mx-auto space-y-12 py-8 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-extrabold text-slate-900">About PriyaElectrical</h2>
+        <div className="h-1.5 w-24 bg-blue-600 mx-auto rounded-full"></div>
+      </div>
 
-        function Home({ setView }) {
-            const items = [
-                { name: "HT/LT Cables", icon: "zap", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400" },
-                { name: "Solar Systems", icon: "sun", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=400" },
-                { name: "Raw Materials", icon: "factory", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400" }
-            ];
-            return (
-                <div className="space-y-12">
-                    <div className="h-[400px] rounded-[2rem] overflow-hidden relative shadow-xl">
-                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1200" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex flex-col justify-center p-12 text-white">
-                            <h2 className="text-5xl font-extrabold mb-4">Priya Electrical</h2>
-                            <p className="text-xl mb-8">Industrial Infrastructure Specialists</p>
-                            <button onClick={() => setView('quote')} className="bg-blue-600 w-fit px-8 py-4 rounded-xl font-bold">Start Project</button>
-                        </div>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {items.map(i => (
-                            <div key={i.name} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition-all">
-                                <img src={i.img} className="h-40 w-full object-cover" />
-                                <div className="p-6">
-                                    <h3 className="text-xl font-bold">{i.name}</h3>
-                                    <button onClick={() => setView('quote')} className="mt-4 text-blue-600 font-bold flex items-center gap-2">Details <Icon name="arrow-right" size={14} /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-6">
+          <div className="bg-blue-50 border-l-4 border-blue-600 p-6 rounded-r-xl">
+            <h3 className="font-bold text-blue-900 mb-2">Corporate Profile</h3>
+            <p className="text-blue-800/80 leading-relaxed text-sm">
+              We are a verified industrial electrical vendor specializing in high-tension infrastructure. 
+              Known for reliability and certified safety standards.
+            </p>
+          </div>
+          <p className="text-slate-600 leading-relaxed">
+            PriyaElectrical has consistently delivered end-to-end solutions for manufacturing plants, solar farms, 
+            and commercial grids. We bridge the gap between complex engineering needs and reliable component supply.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+              <span className="block text-2xl font-extrabold text-blue-600">500+</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">Projects</span>
+            </div>
+            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+              <span className="block text-2xl font-extrabold text-blue-600">100%</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">Reliability</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+          <h3 className="text-xl font-bold mb-6 text-slate-800">Official Contact Information</h3>
+          <div className="space-y-6">
+            <a href="tel:8147267247" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
+              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Phone size={20}/></div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Phone Number</p>
+                <p className="font-bold text-slate-700 group-hover:text-blue-600">8147267247</p>
+              </div>
+            </a>
+            <a href="mailto:Raju.324@gmail.com" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
+              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Mail size={20}/></div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Email Support</p>
+                <p className="font-bold text-slate-700 group-hover:text-blue-600">Raju.324@gmail.com</p>
+              </div>
+            </a>
+            <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                <CheckCircle size={14}/> Verified Vendor
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono uppercase">Mon - Sat Service</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequestForm({ type, onSubmit }) {
+  const [form, setForm] = useState({ name: '', phone: '', company: '', item: 'Standard Quote', details: '' });
+  
+  const isMaterial = type === 'material';
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-in zoom-in duration-300">
+      <div className="flex items-center gap-5 mb-10">
+        <div className="bg-blue-600 p-5 rounded-3xl text-white shadow-lg shadow-blue-200">
+          {isMaterial ? <Factory size={32} /> : <Zap size={32} />}
+        </div>
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 leading-tight">
+            {isMaterial ? 'Material Sourcing' : 'Project Quotation'}
+          </h2>
+          <p className="text-slate-400 font-medium">Professional intake for industrial supply</p>
+        </div>
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-8">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Representative Name</label>
+            <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+              placeholder="e.g. John Doe" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          </div>
+          
+          {isMaterial && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Company Name</label>
+              <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+                placeholder="e.g. Tesla Ind." value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Contact Phone</label>
+            <input required type="tel" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+              placeholder="+91 00000 00000" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+          </div>
+
+          {!isMaterial && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Required Asset</label>
+              <select className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium appearance-none" 
+                value={form.item} onChange={e => setForm({...form, item: e.target.value})}>
+                <option value="Solar Panels">Solar Panels</option>
+                <option value="High Voltage Cables">High Voltage Cables</option>
+                <option value="Industrial Switches">Industrial Switches</option>
+                <option value="Transformers">Transformers</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Specific Requirements</label>
+          <textarea rows="4" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+            placeholder="Quantity, technical specs, or deadline details..." value={form.details} onChange={e => setForm({...form, details: e.target.value})}></textarea>
+        </div>
+
+        <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-600 hover:-translate-y-1 transition-all shadow-2xl shadow-slate-200 flex justify-center items-center gap-3">
+          Submit Official Request <ChevronRight size={20}/>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function Tracking({ orders, materials }) {
+  const all = [
+    ...orders.map(o => ({...o, type: 'Quote Request', color: 'bg-blue-600'})), 
+    ...materials.map(m => ({...m, type: 'Material Sourcing', color: 'bg-indigo-600'}))
+  ].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Request Tracking</h2>
+        <span className="text-xs font-bold text-slate-400 uppercase">{all.length} Total Requests</span>
+      </div>
+
+      {all.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 text-slate-400">
+          No requests found. Start a new quote to see history.
+        </div>
+      ) : (
+        all.map(item => (
+          <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4 w-full">
+              <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.type}</span>
+                <h3 className="font-bold text-slate-800 text-lg">{item.item || 'General Request'}</h3>
+                <p className="text-xs text-slate-500">{item.company || 'Private Party'} • {new Date(item.timestamp).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider ${
+              item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {item.status}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function AdminPanel({ orders, materials, onUpdate, onDelete }) {
+  const [bill, setBill] = useState({ amount: '', rate: '18', client: '', invNo: 'INV-' + Math.floor(Math.random() * 90000 + 10000) });
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  const gstAmt = (parseFloat(bill.amount || 0) * (parseFloat(bill.rate) / 100)).toFixed(2);
+  const total = (parseFloat(bill.amount || 0) + parseFloat(gstAmt)).toFixed(2);
+
+  const handleDownload = async () => {
+    if (!window.html2pdf) {
+      alert("PDF library is still loading. Please wait a moment.");
+      return;
+    }
+    setIsExporting(true);
+    const element = document.getElementById('printable-bill');
+    const opt = {
+      margin: 10,
+      filename: `Invoice_${bill.invNo}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 3, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await window.html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error("PDF Export failed", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const RequestList = ({ items, title, type }) => (
+    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-10">
+      <div className="bg-slate-50 p-7 flex justify-between items-center border-b border-slate-200">
+        <h3 className="font-black text-slate-800 flex items-center gap-3 uppercase tracking-wider text-sm">
+          <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+            {type === 'material' ? <Factory size={18}/> : <Zap size={18}/>}
+          </div>
+          {title}
+        </h3>
+        <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full font-black uppercase tracking-widest">{items.length}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest">
+            <tr>
+              <th className="px-8 py-5">Client Contact</th>
+              <th className="px-8 py-5">Request Detail</th>
+              <th className="px-8 py-5">Status</th>
+              <th className="px-8 py-5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {items.map(i => (
+              <tr key={i.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-8 py-6">
+                  <div className="font-black text-slate-800">{i.name}</div>
+                  <div className="text-[11px] text-slate-400 font-bold">{i.company || 'N/A'} • {i.phone}</div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-sm font-bold text-slate-600">{i.item || 'N/A'}</span>
+                  <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{i.details}</div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${
+                    i.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                  }`}>
+                    {i.status}
+                  </span>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => onUpdate(i.id, 'pending', type)} className="p-2.5 bg-slate-100 hover:bg-amber-100 rounded-xl text-slate-500 hover:text-amber-600 transition-all"><Clock size={16}/></button>
+                    <button onClick={() => onUpdate(i.id, 'approved', type)} className="p-2.5 bg-slate-100 hover:bg-green-100 rounded-xl text-slate-500 hover:text-green-600 transition-all"><CheckCircle size={16}/></button>
+                    <button onClick={() => onDelete(i.id, type)} className="p-2.5 bg-slate-100 hover:bg-red-100 rounded-xl text-slate-500 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No active data</div>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="grid lg:grid-cols-4 gap-10">
+      {showInvoice && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            <div className="p-10" id="printable-bill">
+              <div className="flex justify-between items-start mb-12">
+                <div>
+                  <h1 className="text-3xl font-black text-slate-900 mb-1">INVOICE</h1>
+                  <p className="text-slate-400 font-bold tracking-widest uppercase text-xs">{bill.invNo}</p>
                 </div>
-            );
-        }
-
-        function About() {
-            return (
-                <div className="max-w-4xl mx-auto py-10 bg-white p-10 rounded-[2rem] border shadow-sm">
-                    <h2 className="text-3xl font-bold mb-6">About Us</h2>
-                    <p className="text-slate-600 mb-8 leading-relaxed">Priya Electrical is a leading industrial vendor specializing in power distribution and solar infrastructure. We provide certified components and expert engineering solutions.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-blue-50 p-6 rounded-2xl"><Icon name="phone" className="mb-2 text-blue-600"/><p className="font-bold">8147267247</p></div>
-                        <div className="bg-blue-50 p-6 rounded-2xl"><Icon name="mail" className="mb-2 text-blue-600"/><p className="font-bold">Raju@#324@gmail.com</p></div>
-                    </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end mb-1">
+                    <Zap className="text-blue-600 w-5 h-5" fill="currentColor" />
+                    <span className="font-black text-xl text-slate-900">PriyaElectrical</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold">Industrial Vendor • 8147267247</p>
                 </div>
-            );
-        }
+              </div>
 
-        function RequestForm({ type, onSubmit }) {
-            const [f, setF] = useState({ name: '', phone: '', details: '' });
-            return (
-                <div className="max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border">
-                    <h2 className="text-3xl font-bold mb-6">{type === 'material' ? 'Source Material' : 'Get Quote'}</h2>
-                    <form onSubmit={e => { e.preventDefault(); onSubmit(f, type); }} className="space-y-4">
-                        <input required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Name" onChange={e => setF({...f, name: e.target.value})} />
-                        <input required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Phone" onChange={e => setF({...f, phone: e.target.value})} />
-                        <textarea required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Details" rows="4" onChange={e => setF({...f, details: e.target.value})}></textarea>
-                        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">Submit</button>
-                    </form>
+              <div className="grid grid-cols-2 gap-10 mb-12">
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Billed To</h4>
+                  <p className="font-black text-slate-800 text-lg uppercase">{bill.client || 'Valued Client'}</p>
+                  <p className="text-slate-500 text-xs font-bold">Project Procurement</p>
                 </div>
-            );
-        }
+                <div className="text-right">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Issue Date</h4>
+                  <p className="font-black text-slate-800">{new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
 
-        function Tracking({ orders, materials }) {
-            const all = [...orders, ...materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-            return (
-                <div className="max-w-2xl mx-auto space-y-4">
-                    <h2 className="text-2xl font-bold mb-4">Request Status</h2>
-                    {all.map(i => (
-                        <div key={i.id} className="bg-white p-6 rounded-2xl border flex justify-between items-center">
-                            <div><p className="font-bold">{i.name}</p><p className="text-xs text-slate-400">{i.timestamp}</p></div>
-                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold uppercase">{i.status}</span>
-                        </div>
-                    ))}
+              <div className="border-t-2 border-slate-100 py-8 space-y-4">
+                <div className="flex justify-between font-bold text-slate-400 uppercase text-[10px] tracking-widest px-4">
+                  <span>Description</span>
+                  <span>Amount</span>
                 </div>
-            );
-        }
+                <div className="flex justify-between font-black text-slate-800 bg-slate-50 p-5 rounded-2xl">
+                  <span>Industrial Supply Service</span>
+                  <span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span>
+                </div>
+              </div>
 
-        function AdminPanel({ orders, materials, db, dbId }) {
-            const handleUpdate = (id, s, t) => {
-                const c = t === 'material' ? 'materials' : 'orders';
-                db.collection('artifacts').doc(dbId).collection('public').doc('data').collection(c).doc(id).update({status: s});
-            };
-            return (
-                <div className="space-y-8">
-                    <h2 className="text-3xl font-bold">Admin Console</h2>
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                            <h3 className="font-bold mb-4 border-b pb-2">Material Requests</h3>
-                            {materials.map(m => (
-                                <div key={m.id} className="py-2 border-b flex justify-between text-sm">
-                                    <span>{m.name}</span>
-                                    <button onClick={() => handleUpdate(m.id, 'approved', 'material')} className="text-green-600 font-bold">Approve</button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                            <h3 className="font-bold mb-4 border-b pb-2">Quotation Requests</h3>
-                            {orders.map(o => (
-                                <div key={o.id} className="py-2 border-b flex justify-between text-sm">
-                                    <span>{o.name}</span>
-                                    <button onClick={() => handleUpdate(o.id, 'approved', 'quote')} className="text-green-600 font-bold">Approve</button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+              <div className="flex justify-end pt-8">
+                <div className="w-64 space-y-3">
+                  <div className="flex justify-between text-slate-500 font-bold text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400 font-bold text-sm italic">
+                    <span>GST ({bill.rate}%)</span>
+                    <span>₹{gstAmt}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-900 font-black text-2xl pt-4 border-t border-slate-200">
+                    <span>Total</span>
+                    <span>₹{total}</span>
+                  </div>
                 </div>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 p-6 flex gap-4 no-print">
+              <button 
+                disabled={isExporting}
+                onClick={handleDownload} 
+                className={`flex-1 ${isExporting ? 'bg-blue-400' : 'bg-blue-600'} text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95`}
+              >
+                <Download size={16}/> {isExporting ? 'Generating...' : 'Download & Print'}
+              </button>
+              <button onClick={() => setShowInvoice(false)} className="flex-1 bg-slate-200 text-slate-800 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                <X size={16}/> Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="lg:col-span-3">
+        <RequestList items={materials} title="Raw Material Queue" type="material" />
+        <RequestList items={orders} title="Quotations Queue" type="quote" />
+      </div>
+      
+      <div className="lg:col-span-1 space-y-8">
+        <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl"></div>
+          <h3 className="font-black text-2xl mb-8 flex items-center gap-3">
+            <div className="bg-blue-600 p-2.5 rounded-xl"><Calculator size={22}/></div>
+            GST Billing
+          </h3>
+          
+          <div className="space-y-6 relative z-10">
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Client Name</label>
+              <input type="text" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold" 
+                placeholder="Client Name" value={bill.client} onChange={e => setBill({...bill, client: e.target.value})}/>
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Base Amount (₹)</label>
+              <input type="number" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold" 
+                placeholder="0.00" value={bill.amount} onChange={e => setBill({...bill, amount: e.target.value})}/>
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">GST Rate (%)</label>
+              <select className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold appearance-none" 
+                value={bill.rate} onChange={e => setBill({...bill, rate: e.target.value})}>
+                <option value="5" className="text-slate-900">5% Essentials</option>
+                <option value="12" className="text-slate-900">12% Equipment</option>
+                <option value="18" className="text-slate-900">18% Standard</option>
+                <option value="28" className="text-slate-900">28% Luxury</option>
+              </select>
+            </div>
+            
+            <div className="bg-white/5 p-6 rounded-3xl space-y-3 border border-white/5">
+              <div className="flex justify-between text-xs text-slate-400 font-bold"><span>Subtotal:</span><span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between text-xs text-blue-400 font-bold uppercase tracking-widest"><span>GST ({bill.rate}%):</span><span>₹{gstAmt}</span></div>
+              <div className="flex justify-between font-black text-2xl pt-5 border-t border-white/10 mt-3"><span>Total:</span><span className="text-blue-500">₹{total}</span></div>
+            </div>
+
+            <button onClick={() => setShowInvoice(true)} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl shadow-blue-500/30 flex items-center justify-center gap-3 active:scale-95">
+                <Printer size={18}/> Generate Official Invoice
+            </button>
+            </div>
+        </div>
+        </div>
+        </div>
             );
         }
 
