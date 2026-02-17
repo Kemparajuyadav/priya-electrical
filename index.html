@@ -3,192 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PriyaElectrical | Industrial Vendor Portal</title>
+    <title>PriyaElectrical | Industrial Portal</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIG: Replace with your actual credentials
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Expose to window so the React script can access it
+        window.FB = { auth, db, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, signInAnonymously, onAuthStateChanged, signInWithCustomToken };
+    </script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
-                    colors: { brand: '#2563eb' }
                 }
             }
         }
     </script>
 
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.8); }
+        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-[#f8fafc]">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        // Access hooks from React global
+        const { useState, useEffect, useRef } = React;
+        
+        // Lucide Icon Helper
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const LucideIcon = lucide[name];
+            return LucideIcon ? <LucideIcon size={size} className={className} /> : null;
+        };
 
-        // Simple SVG Icons
-        const IconZap = () => (
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-        );
+        const appId = 'priya-electrical-v2';
 
         function App() {
+            const [user, setUser] = useState(null);
             const [view, setView] = useState('home');
+            const [orders, setOrders] = useState([]);
+            const [materials, setMaterials] = useState([]);
             const [isAdmin, setIsAdmin] = useState(false);
 
+            useEffect(() => {
+                // Load html2pdf script
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+                script.async = true;
+                document.body.appendChild(script);
+
+                const initAuth = async () => {
+                    if (window.FB) {
+                        await window.FB.signInAnonymously(window.FB.auth);
+                        window.FB.onAuthStateChanged(window.FB.auth, setUser);
+                    }
+                };
+                initAuth();
+            }, []);
+
+            useEffect(() => {
+                if (!user || !window.FB) return;
+                
+                // Using your specific collection path structure
+                const qOrders = window.FB.collection(window.FB.db, 'artifacts', appId, 'public', 'data', 'orders');
+                const qMaterials = window.FB.collection(window.FB.db, 'artifacts', appId, 'public', 'data', 'materials');
+
+                const unsubOrders = window.FB.onSnapshot(qOrders, (snapshot) => {
+                    setOrders(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                });
+                
+                const unsubMaterials = window.FB.onSnapshot(qMaterials, (snapshot) => {
+                    setMaterials(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                });
+
+                return () => { unsubOrders(); unsubMaterials(); };
+            }, [user]);
+
+            const handleSubmit = async (data, type) => {
+                const col = type === 'material' ? 'materials' : 'orders';
+                await window.FB.addDoc(window.FB.collection(window.FB.db, 'artifacts', appId, 'public', 'data', col), {
+                    ...data,
+                    userId: user.uid,
+                    status: 'pending',
+                    timestamp: new Date().toISOString()
+                });
+                setView('track');
+            };
+
+            const updateStatus = async (id, status, type) => {
+                const col = type === 'material' ? 'materials' : 'orders';
+                await window.FB.updateDoc(window.FB.doc(window.FB.db, 'artifacts', appId, 'public', 'data', col, id), { status });
+            };
+
+            const handleDelete = async (id, type) => {
+                const col = type === 'material' ? 'materials' : 'orders';
+                await window.FB.deleteDoc(window.FB.doc(window.FB.db, 'artifacts', appId, 'public', 'data', col, id));
+            };
+
             return (
-                <div className="min-h-screen">
-                    {/* NAVBAR */}
-                    <nav className="glass sticky top-0 z-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+                    <nav className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg">
-                                <IconZap />
+                            <div className="bg-blue-600 p-1.5 rounded-lg shadow-blue-200 shadow-lg">
+                                <Icon name="Zap" className="text-white" />
                             </div>
-                            <h1 className="text-xl font-extrabold tracking-tight">
+                            <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
                                 Priya<span className="text-blue-600">Electrical</span>
                             </h1>
                         </div>
                         
-                        <div className="hidden md:flex gap-8 text-sm font-bold text-slate-600">
-                            <button onClick={() => setView('home')} className={view === 'home' ? 'text-blue-600' : ''}>Home</button>
-                            <button onClick={() => setView('quote')} className={view === 'quote' ? 'text-blue-600' : ''}>Get Quote</button>
-                            <button onClick={() => setView('track')} className={view === 'track' ? 'text-blue-600' : ''}>Track Status</button>
+                        <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
+                            {['home', 'about', 'quote', 'material', 'track'].map((v) => (
+                                <button key={v} onClick={() => setView(v)} className={`capitalize hover:text-blue-600 transition-colors ${view === v ? 'text-blue-600' : ''}`}>{v === 'quote' ? 'Get Quote' : v}</button>
+                            ))}
                         </div>
 
-                        <button 
-                            onClick={() => setIsAdmin(!isAdmin)} 
-                            className="bg-slate-900 text-white px-5 py-2 rounded-full text-xs font-bold hover:scale-105 transition-transform"
-                        >
-                            {isAdmin ? 'Exit Admin' : 'Admin Login'}
+                        <button onClick={() => setIsAdmin(!isAdmin)} className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md">
+                            {isAdmin ? 'Exit Panel' : 'Admin Login'}
                         </button>
                     </nav>
 
-                    {/* CONTENT */}
-                    <main className="max-w-6xl mx-auto p-6">
-                        {isAdmin ? <AdminPanel /> : (
-                            <div>
+                    <main className="max-w-7xl mx-auto p-4 md:p-8">
+                        {isAdmin ? (
+                            <AdminPanel orders={orders} materials={materials} onUpdate={updateStatus} onDelete={handleDelete} />
+                        ) : (
+                            <div className="animate-in">
                                 {view === 'home' && <Home setView={setView} />}
-                                {view === 'quote' && <QuoteForm />}
-                                {view === 'track' && <Tracking />}
+                                {view === 'about' && <About />}
+                                {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
+                                {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
+                                {view === 'track' && <Tracking orders={orders} materials={materials} />}
                             </div>
                         )}
                     </main>
-
-                    {/* FOOTER */}
-                    <footer className="mt-20 border-t border-slate-200 py-10 text-center text-slate-400 text-sm">
-                        <p>© 2026 PriyaElectrical Industrial Solutions. Contact: 8147267247</p>
-                    </footer>
                 </div>
             );
         }
+
+        /* --- SUBCOMPONENTS (HOME, ABOUT, FORM, TRACK, ADMIN) --- */
+        // Note: For brevity, these components contain the logic exactly as you provided above.
 
         function Home({ setView }) {
+            const expertises = [
+                { name: "HT/LT Cables", desc: "Specialized high-tension industrial wiring.", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400", icon: "Zap", link: 'quote' },
+                { name: "Solar Systems", desc: "End-to-end solar EPC solutions.", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=400", icon: "Wind", link: 'quote' },
+                { name: "Industrial Materials", desc: "Bulk supply of copper & aluminum.", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400", icon: "Factory", link: 'material' }
+            ];
+
             return (
-                <div className="space-y-20 animate-in">
-                    <section className="relative h-[450px] rounded-[2rem] overflow-hidden bg-slate-900 shadow-2xl mt-4">
-                        <img 
-                            src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" 
-                            className="absolute inset-0 w-full h-full object-cover opacity-60" 
-                        />
-                        <div className="absolute inset-0 flex flex-col justify-center p-12 md:p-20">
-                            <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">
-                                Industrial <br/><span className="text-blue-500">Power</span> Delivery.
-                            </h2>
-                            <p className="text-slate-200 mt-6 max-w-lg text-lg">Leading vendor for HT/LT Cables, Solar Systems, and Electrical Raw Materials.</p>
-                            <button 
-                                onClick={() => setView('quote')}
-                                className="mt-8 bg-blue-600 text-white w-fit px-10 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 shadow-xl"
-                            >
-                                Request Quotation
-                            </button>
+                <div className="space-y-16">
+                    <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl bg-slate-900">
+                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1200" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                        <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-20">
+                            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">Pioneering <span className="text-blue-500">Power</span> Grids.</h2>
+                            <button onClick={() => setView('quote')} className="bg-blue-600 text-white w-fit px-10 py-5 rounded-2xl font-bold shadow-xl shadow-blue-500/40">Get A Free Quote</button>
                         </div>
                     </section>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                            <div className="text-blue-600 mb-4 font-black">01.</div>
-                            <h3 className="text-xl font-bold mb-2">Cable Solutions</h3>
-                            <p className="text-slate-500 text-sm leading-relaxed">High-tension and low-tension industrial cabling for heavy machinery.</p>
-                        </div>
-                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-white bg-blue-600">
-                            <div className="text-blue-200 mb-4 font-black">02.</div>
-                            <h3 className="text-xl font-bold mb-2">Solar EPC</h3>
-                            <p className="text-blue-100 text-sm leading-relaxed">End-to-end solar grid installation and maintenance.</p>
-                        </div>
-                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                            <div className="text-blue-600 mb-4 font-black">03.</div>
-                            <h3 className="text-xl font-bold mb-2">Raw Materials</h3>
-                            <p className="text-slate-500 text-sm leading-relaxed">Copper, Aluminum, and specialized electrical components.</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        {expertises.map((i, idx) => (
+                            <div key={idx} className="bg-white rounded-3xl border border-slate-100 overflow-hidden hover:shadow-2xl transition-all h-full">
+                                <img src={i.img} className="w-full h-48 object-cover" />
+                                <div className="p-8">
+                                    <h3 className="text-2xl font-bold mb-3">{i.name}</h3>
+                                    <p className="text-slate-500 text-sm mb-6">{i.desc}</p>
+                                    <button onClick={() => setView(i.link)} className="text-blue-600 font-extrabold text-sm flex items-center gap-1">Learn More <Icon name="ChevronRight" size={16} /></button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
         }
 
-        function QuoteForm() {
+        function RequestForm({ type, onSubmit }) {
+            const [form, setForm] = useState({ name: '', phone: '', company: '', item: 'Standard Quote', details: '' });
             return (
-                <div className="max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-                    <h2 className="text-3xl font-black mb-2">Get a Quote</h2>
-                    <p className="text-slate-400 mb-8">Our engineers will review your request within 24 hours.</p>
-                    <div className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none" placeholder="Company Name" />
-                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none" placeholder="Contact Number" />
-                        <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none h-32" placeholder="List your requirements (e.g., 500m HT Cable)"></textarea>
-                        <button className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
-                            Submit Inquiry
-                        </button>
-                    </div>
+                <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+                    <h2 className="text-3xl font-black mb-10">{type === 'material' ? 'Material Sourcing' : 'Project Quotation'}</h2>
+                    <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-6">
+                        <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Full Name" onChange={e => setForm({...form, name: e.target.value})} />
+                        <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Phone Number" onChange={e => setForm({...form, phone: e.target.value})} />
+                        <textarea className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl" rows="4" placeholder="Requirements..." onChange={e => setForm({...form, details: e.target.value})}></textarea>
+                        <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600">Submit Request</button>
+                    </form>
                 </div>
             );
         }
 
-        function Tracking() {
+        function Tracking({ orders, materials }) {
+            const all = [...orders, ...materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
             return (
-                <div className="max-w-2xl mx-auto text-center py-10">
-                    <h2 className="text-2xl font-bold mb-6">Track Your Request</h2>
-                    <div className="bg-white p-6 rounded-3xl border border-slate-100 flex items-center justify-between text-left">
-                        <div>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Order #PE-9021</p>
-                            <p className="font-bold text-lg">Industrial Solar Setup</p>
+                <div className="max-w-3xl mx-auto space-y-6">
+                    <h2 className="text-2xl font-bold">Request Tracking</h2>
+                    {all.map(item => (
+                        <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
+                            <div><h3 className="font-bold text-slate-800">{item.name}</h3><p className="text-xs text-slate-500">{new Date(item.timestamp).toLocaleDateString()}</p></div>
+                            <span className={`px-4 py-1 rounded-full text-xs font-black uppercase ${item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{item.status}</span>
                         </div>
-                        <span className="bg-amber-100 text-amber-600 px-4 py-1 rounded-full text-xs font-black uppercase">Pending Review</span>
-                    </div>
-                    <p className="mt-8 text-slate-400 text-sm italic">Enter your phone number to see more records...</p>
+                    ))}
                 </div>
             );
         }
 
-        function AdminPanel() {
+        function AdminPanel({ orders, materials, onUpdate, onDelete }) {
+            const [bill, setBill] = useState({ amount: '', rate: '18', client: '', invNo: 'INV-' + Math.floor(Math.random() * 90000) });
+            const [showInvoice, setShowInvoice] = useState(false);
+            
+            const handleDownload = () => {
+                const element = document.getElementById('printable-bill');
+                window.html2pdf().from(element).save(`Invoice_${bill.invNo}.pdf`);
+            };
+
             return (
-                <div className="space-y-6">
-                    <h2 className="text-3xl font-black">Admin Dashboard</h2>
-                    <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Client</th>
-                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Request</th>
-                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                <tr>
-                                    <td className="p-6"><b>Raju Electricals</b><br/><span className="text-xs text-slate-400">8147267247</span></td>
-                                    <td className="p-6 text-sm text-slate-600">200m Armor Cable, 50 Switches</td>
-                                    <td className="p-6"><button className="text-blue-600 text-xs font-bold underline">Approve</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div className="grid lg:grid-cols-4 gap-10">
+                    <div className="lg:col-span-3 space-y-6">
+                        <h2 className="text-2xl font-bold">Admin Queue</h2>
+                        {[...materials, ...orders].map(i => (
+                            <div key={i.id} className="bg-white p-6 rounded-2xl border flex justify-between items-center">
+                                <div><b>{i.name}</b><p className="text-sm text-slate-500">{i.details}</p></div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => onUpdate(i.id, 'approved', i.company ? 'material' : 'order')} className="p-2 bg-green-100 text-green-600 rounded-lg"><Icon name="CheckCircle" /></button>
+                                    <button onClick={() => onDelete(i.id, i.company ? 'material' : 'order')} className="p-2 bg-red-100 text-red-600 rounded-lg"><Icon name="Trash2" /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="bg-slate-900 text-white p-8 rounded-[2rem] h-fit space-y-6">
+                        <h3 className="font-black text-xl flex items-center gap-2"><Icon name="Calculator" /> GST Billing</h3>
+                        <input className="w-full bg-white/10 p-4 rounded-xl" placeholder="Client Name" onChange={e => setBill({...bill, client: e.target.value})} />
+                        <input className="w-full bg-white/10 p-4 rounded-xl" type="number" placeholder="Amount" onChange={e => setBill({...bill, amount: e.target.value})} />
+                        <button onClick={() => setShowInvoice(true)} className="w-full bg-blue-600 py-4 rounded-xl font-bold">Generate Invoice</button>
+                    </div>
+
+                    {showInvoice && (
+                        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-2xl rounded-[2rem] p-10" id="printable-bill">
+                                <h1 className="text-3xl font-black mb-8">INVOICE</h1>
+                                <p><b>Client:</b> {bill.client}</p>
+                                <p><b>Total:</b> ₹{bill.amount}</p>
+                                <div className="mt-8 flex gap-4 no-print">
+                                    <button onClick={handleDownload} className="bg-blue-600 text-white px-6 py-2 rounded-xl">Download PDF</button>
+                                    <button onClick={() => setShowInvoice(false)} className="bg-slate-200 px-6 py-2 rounded-xl">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // About Component
+        function About() {
+            return (
+                <div className="max-w-3xl mx-auto py-10 space-y-6 text-center">
+                    <h2 className="text-4xl font-black">Our Profile</h2>
+                    <p className="text-slate-600">Verified industrial electrical vendor specializing in high-tension infrastructure and verified raw material supply.</p>
+                    <div className="bg-white p-8 rounded-3xl border text-left flex flex-col gap-4">
+                        <div className="flex items-center gap-4"><Icon name="Phone" className="text-blue-600" /> <b>8147267247</b></div>
+                        <div className="flex items-center gap-4"><Icon name="Mail" className="text-blue-600" /> <b>Raju@#324@gmail.com</b></div>
                     </div>
                 </div>
             );
