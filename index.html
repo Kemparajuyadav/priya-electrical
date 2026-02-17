@@ -13,39 +13,37 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
-        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
-        .card-hover:hover { transform: translateY(-8px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    </style>
 </head>
-<body class="bg-[#f8fafc]">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
-        // --- FIREBASE SETUP ---
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // --- ORIGINAL LOGIC WITH GITHUB FALLBACK ---
+        let firebaseConfig;
+        try {
+            // This tries to use your original "backend" method
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            // This is the "Correct" way for GitHub Pages: Put your real keys here!
+            firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_PROJECT.firebaseapp.com",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_PROJECT.appspot.com",
+                messagingSenderId: "YOUR_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
         }
+
+        firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         const DATABASE_ID = 'priya-electrical-v2';
 
-        // --- ICON COMPONENT ---
-        const LucideIcon = ({ name, className = "w-5 h-5" }) => {
+        // Helper for icons
+        const Icon = ({ name, className = "w-5 h-5" }) => {
             useEffect(() => { lucide.createIcons(); }, []);
             return <i data-lucide={name} className={className}></i>;
         };
@@ -58,52 +56,53 @@
             const [isAdmin, setIsAdmin] = useState(false);
 
             useEffect(() => {
-                auth.signInAnonymously().catch(err => console.error("Auth Failed", err));
+                auth.signInAnonymously().catch(console.error);
                 auth.onAuthStateChanged(setUser);
             }, []);
 
             useEffect(() => {
                 if (!user) return;
-                const baseRef = db.collection('artifacts').doc(DATABASE_ID).collection('public').doc('data');
+                // EXACT path from your original logic
+                const docRef = db.collection('artifacts').doc(DATABASE_ID).collection('public').doc('data');
                 
-                const unsubO = baseRef.collection('orders').onSnapshot(s => 
-                    setOrders(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                const unsubM = baseRef.collection('materials').onSnapshot(s => 
-                    setMaterials(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                const unsubO = docRef.collection('orders').onSnapshot(s => setOrders(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                const unsubM = docRef.collection('materials').onSnapshot(s => setMaterials(s.docs.map(d => ({id: d.id, ...d.data()}))));
                 
                 return () => { unsubO(); unsubM(); };
             }, [user]);
 
+            // YOUR ORIGINAL SUBMIT LOGIC
             const handleSubmit = async (data, type) => {
                 const col = type === 'material' ? 'materials' : 'orders';
                 await db.collection('artifacts').doc(DATABASE_ID).collection('public').doc('data').collection(col).add({
-                    ...data, userId: user.uid, status: 'pending', timestamp: new Date().toISOString()
+                    ...data,
+                    userId: user.uid,
+                    status: 'pending',
+                    timestamp: new Date().toISOString()
                 });
                 setView('track');
             };
 
             return (
-                <div className="min-h-screen">
-                    <nav className="glass-nav border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-200 text-white">
-                                <LucideIcon name="zap" />
-                            </div>
-                            <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
-                                Priya<span className="text-blue-600">Electrical</span>
-                            </h1>
+                <div className="min-h-screen font-sans text-slate-900">
+                    <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50">
+                        <div className="flex items-center gap-2" onClick={() => setView('home')}>
+                            <div className="bg-blue-600 p-1 rounded text-white"><Icon name="zap" /></div>
+                            <h1 className="text-xl font-bold">PriyaElectrical</h1>
                         </div>
-                        <div className="hidden md:flex gap-8 text-sm font-bold text-slate-500">
-                            {['home', 'about', 'quote', 'material', 'track'].map(v => (
-                                <button key={v} onClick={() => setView(v)} className={`capitalize hover:text-blue-600 ${view === v ? 'text-blue-600' : ''}`}>{v}</button>
-                            ))}
+                        <div className="hidden md:flex gap-6 text-sm font-semibold">
+                            <button onClick={() => setView('home')}>Home</button>
+                            <button onClick={() => setView('about')}>About</button>
+                            <button onClick={() => setView('quote')}>Get Quote</button>
+                            <button onClick={() => setView('material')}>Materials</button>
+                            <button onClick={() => setView('track')}>Track</button>
                         </div>
-                        <button onClick={() => setIsAdmin(!isAdmin)} className="bg-slate-900 text-white px-5 py-2 rounded-full text-xs font-bold hover:bg-blue-600 transition-all">
-                            {isAdmin ? 'Exit Panel' : 'Admin Login'}
+                        <button onClick={() => setIsAdmin(!isAdmin)} className="bg-black text-white px-4 py-2 rounded-full text-xs">
+                            {isAdmin ? 'Exit' : 'Admin'}
                         </button>
                     </nav>
 
-                    <main className="max-w-7xl mx-auto p-4 md:p-8">
+                    <main className="max-w-7xl mx-auto p-6">
                         {isAdmin ? (
                             <AdminPanel orders={orders} materials={materials} db={db} dbId={DATABASE_ID} />
                         ) : (
@@ -120,42 +119,31 @@
             );
         }
 
+        // --- COMPONENTS (YOUR ORIGINAL UI) ---
+
         function Home({ setView }) {
-            const expertises = [
-                { name: "HT/LT Cables", desc: "Specialized high-tension industrial wiring.", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400", icon: "zap", link: 'quote' },
-                { name: "Solar Systems", desc: "End-to-end solar EPC solutions.", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=400", icon: "wind", link: 'quote' },
-                { name: "Raw Materials", desc: "Bulk copper and aluminum supply.", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400", icon: "factory", link: 'material' },
-                { name: "Smart Automation", desc: "PLC systems and intelligent switchgear.", img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400", icon: "cpu", link: 'quote' },
-                { name: "Safety Infrastructure", desc: "Circuit breakers and earthing.", img: "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?w=400", icon: "shield-check", link: 'quote' },
-                { name: "Logistics", desc: "Fast delivery for critical components.", img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400", icon: "truck", link: 'material' }
+            const items = [
+                { name: "HT/LT Cables", icon: "zap", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400" },
+                { name: "Solar Systems", icon: "sun", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=400" },
+                { name: "Raw Materials", icon: "factory", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400" }
             ];
-
             return (
-                <div className="space-y-16 animate-fade-in">
-                    <section className="relative h-[500px] rounded-[3rem] overflow-hidden shadow-2xl">
-                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" className="absolute inset-0 w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
-                            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">Pioneering Modern <br/><span className="text-blue-500">Power</span> Grids.</h2>
-                            <div className="flex flex-wrap gap-5">
-                                <button onClick={() => setView('quote')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 shadow-xl shadow-blue-500/20">Get A Quote <LucideIcon name="chevron-right" /></button>
-                                <button onClick={() => setView('about')} className="bg-white/10 backdrop-blur text-white border border-white/20 px-10 py-5 rounded-2xl font-bold hover:bg-white/20">Our Profile</button>
-                            </div>
+                <div className="space-y-12">
+                    <div className="h-[400px] rounded-[2rem] overflow-hidden relative shadow-xl">
+                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1200" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex flex-col justify-center p-12 text-white">
+                            <h2 className="text-5xl font-extrabold mb-4">Priya Electrical</h2>
+                            <p className="text-xl mb-8">Industrial Infrastructure Specialists</p>
+                            <button onClick={() => setView('quote')} className="bg-blue-600 w-fit px-8 py-4 rounded-xl font-bold">Start Project</button>
                         </div>
-                    </section>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {expertises.map((i, idx) => (
-                            <div key={idx} className="group bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden card-hover">
-                                <div className="relative h-48 overflow-hidden">
-                                    <img src={i.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                </div>
-                                <div className="p-8">
-                                    <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
-                                        <LucideIcon name={i.icon} />
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-3 text-slate-800">{i.name}</h3>
-                                    <p className="text-slate-500 text-sm mb-6 leading-relaxed">{i.desc}</p>
-                                    <button onClick={() => setView(i.link)} className="text-blue-600 font-bold text-sm flex items-center gap-2 group-hover:gap-4 transition-all">Request Details <LucideIcon name="arrow-right" /></button>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {items.map(i => (
+                            <div key={i.name} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg transition-all">
+                                <img src={i.img} className="h-40 w-full object-cover" />
+                                <div className="p-6">
+                                    <h3 className="text-xl font-bold">{i.name}</h3>
+                                    <button onClick={() => setView('quote')} className="mt-4 text-blue-600 font-bold flex items-center gap-2">Details <Icon name="arrow-right" size={14} /></button>
                                 </div>
                             </div>
                         ))}
@@ -166,78 +154,41 @@
 
         function About() {
             return (
-                <div className="max-w-5xl mx-auto py-10 animate-fade-in">
-                    <div className="grid md:grid-cols-2 gap-12 items-center">
-                        <div className="space-y-8">
-                            <h2 className="text-4xl font-extrabold text-slate-900 leading-tight">Reliable Vendor for <br/><span className="text-blue-600">Industrial Excellence</span></h2>
-                            <p className="text-slate-500 leading-relaxed text-lg">With over a decade of experience, Priya Electrical has become a trusted partner for large-scale industrial projects. We prioritize quality, safety, and rapid supply chains.</p>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                                    <p className="text-3xl font-black text-blue-600">10+</p>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Years Experience</p>
-                                </div>
-                                <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                                    <p className="text-3xl font-black text-blue-600">1.2k</p>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Projects Done</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                            <LucideIcon name="shield-check" className="absolute -right-10 -bottom-10 w-64 h-64 opacity-5" />
-                            <h3 className="text-2xl font-bold mb-8">Direct Contact</h3>
-                            <div className="space-y-6 relative z-10">
-                                <div className="flex items-center gap-4"><div className="bg-white/10 p-3 rounded-2xl"><LucideIcon name="phone" /></div><div><p className="text-xs text-white/50 uppercase font-bold">Call Us</p><p className="font-bold text-lg">8147267247</p></div></div>
-                                <div className="flex items-center gap-4"><div className="bg-white/10 p-3 rounded-2xl"><LucideIcon name="mail" /></div><div><p className="text-xs text-white/50 uppercase font-bold">Email</p><p className="font-bold text-lg">Raju@#324@gmail.com</p></div></div>
-                                <div className="flex items-center gap-4"><div className="bg-white/10 p-3 rounded-2xl"><LucideIcon name="clock" /></div><div><p className="text-xs text-white/50 uppercase font-bold">Support</p><p className="font-bold text-lg">24/7 Response</p></div></div>
-                            </div>
-                        </div>
+                <div className="max-w-4xl mx-auto py-10 bg-white p-10 rounded-[2rem] border shadow-sm">
+                    <h2 className="text-3xl font-bold mb-6">About Us</h2>
+                    <p className="text-slate-600 mb-8 leading-relaxed">Priya Electrical is a leading industrial vendor specializing in power distribution and solar infrastructure. We provide certified components and expert engineering solutions.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-blue-50 p-6 rounded-2xl"><Icon name="phone" className="mb-2 text-blue-600"/><p className="font-bold">8147267247</p></div>
+                        <div className="bg-blue-50 p-6 rounded-2xl"><Icon name="mail" className="mb-2 text-blue-600"/><p className="font-bold">Raju@#324@gmail.com</p></div>
                     </div>
                 </div>
             );
         }
 
         function RequestForm({ type, onSubmit }) {
-            const [form, setForm] = useState({ name: '', phone: '', company: '', item: type === 'material' ? 'Copper' : 'Solar Project', details: '' });
+            const [f, setF] = useState({ name: '', phone: '', details: '' });
             return (
-                <div className="max-w-2xl mx-auto bg-white p-10 md:p-16 rounded-[3.5rem] shadow-2xl border border-slate-100 animate-fade-in">
-                    <div className="text-center mb-10 space-y-3">
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">{type === 'material' ? 'Source Materials' : 'Get A Quote'}</h2>
-                        <p className="text-slate-400 font-medium tracking-wide">Enter your industrial requirements below</p>
-                    </div>
-                    <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-5">
-                        <div className="grid md:grid-cols-2 gap-5">
-                            <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white transition-all" placeholder="Full Name" onChange={e => setForm({...form, name: e.target.value})} />
-                            <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white transition-all" placeholder="Phone Number" onChange={e => setForm({...form, phone: e.target.value})} />
-                        </div>
-                        <input className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white transition-all" placeholder="Company / Entity Name" onChange={e => setForm({...form, company: e.target.value})} />
-                        <select className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none appearance-none cursor-pointer" onChange={e => setForm({...form, item: e.target.value})}>
-                            {type === 'material' ? (
-                                <><option>Copper Bulk</option><option>Aluminum Rods</option><option>Switchgear Components</option></>
-                            ) : (
-                                <><option>Solar Power EPC</option><option>HT Cable Layout</option><option>Transformer Install</option></>
-                            )}
-                        </select>
-                        <textarea className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white transition-all" rows="4" placeholder="Specific quantity or project details..." onChange={e => setForm({...form, details: e.target.value})}></textarea>
-                        <button className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:shadow-2xl transition-all shadow-xl">Submit Request</button>
+                <div className="max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border">
+                    <h2 className="text-3xl font-bold mb-6">{type === 'material' ? 'Source Material' : 'Get Quote'}</h2>
+                    <form onSubmit={e => { e.preventDefault(); onSubmit(f, type); }} className="space-y-4">
+                        <input required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Name" onChange={e => setF({...f, name: e.target.value})} />
+                        <input required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Phone" onChange={e => setF({...f, phone: e.target.value})} />
+                        <textarea required className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="Details" rows="4" onChange={e => setF({...f, details: e.target.value})}></textarea>
+                        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">Submit</button>
                     </form>
                 </div>
             );
         }
 
         function Tracking({ orders, materials }) {
-            const all = [...orders.map(o => ({...o, type: 'Quote'})), ...materials.map(m => ({...m, type: 'Material'}))].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const all = [...orders, ...materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
             return (
-                <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-                    <h2 className="text-3xl font-extrabold text-slate-900 mb-8">Live Tracking</h2>
-                    {all.length === 0 ? <div className="text-center p-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100 text-slate-400 font-bold">No active requests found</div> : all.map(i => (
-                        <div key={i.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center group hover:border-blue-200 transition-all">
-                            <div className="flex items-center gap-5">
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${i.type === 'Quote' ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                                    <LucideIcon name={i.type === 'Quote' ? 'zap' : 'factory'} />
-                                </div>
-                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{i.type}</p><h3 className="text-lg font-bold text-slate-800">{i.item}</h3><p className="text-xs text-slate-500 font-medium">{new Date(i.timestamp).toLocaleDateString('en-IN')}</p></div>
-                            </div>
-                            <div className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${i.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{i.status}</div>
+                <div className="max-w-2xl mx-auto space-y-4">
+                    <h2 className="text-2xl font-bold mb-4">Request Status</h2>
+                    {all.map(i => (
+                        <div key={i.id} className="bg-white p-6 rounded-2xl border flex justify-between items-center">
+                            <div><p className="font-bold">{i.name}</p><p className="text-xs text-slate-400">{i.timestamp}</p></div>
+                            <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold uppercase">{i.status}</span>
                         </div>
                     ))}
                 </div>
@@ -245,93 +196,32 @@
         }
 
         function AdminPanel({ orders, materials, db, dbId }) {
-            const [bill, setBill] = useState({ amount: '', client: '', rate: '18' });
-            
-            const handleUpdate = (id, status, type) => {
-                const col = type === 'material' ? 'materials' : 'orders';
-                db.collection('artifacts').doc(dbId).collection('public').doc('data').collection(col).doc(id).update({ status });
+            const handleUpdate = (id, s, t) => {
+                const c = t === 'material' ? 'materials' : 'orders';
+                db.collection('artifacts').doc(dbId).collection('public').doc('data').collection(c).doc(id).update({status: s});
             };
-
-            const handleDelete = (id, type) => {
-                if(!confirm("Delete this record permanently?")) return;
-                const col = type === 'material' ? 'materials' : 'orders';
-                db.collection('artifacts').doc(dbId).collection('public').doc('data').collection(col).doc(id).delete();
-            };
-
-            const generatePDF = () => {
-                const element = document.getElementById('invoice-area');
-                html2pdf().from(element).save(`Invoice_${bill.client || 'Client'}.pdf`);
-            };
-
-            const Table = ({ data, type, title }) => (
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden mb-10 shadow-sm">
-                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-black text-slate-800 uppercase tracking-widest text-sm">{title}</h3>
-                        <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{data.length}</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <tbody className="divide-y divide-slate-100">
-                                {data.map(i => (
-                                    <tr key={i.id} className="hover:bg-slate-50/50 transition-all">
-                                        <td className="p-6">
-                                            <p className="font-bold text-slate-800 leading-none mb-1">{i.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{i.phone}</p>
-                                        </td>
-                                        <td className="p-6"><span className="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">{i.item}</span></td>
-                                        <td className="p-6">
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleUpdate(i.id, 'approved', type)} className="p-2 text-green-600 hover:bg-green-50 rounded-xl"><LucideIcon name="check-circle" /></button>
-                                                <button onClick={() => handleDelete(i.id, type)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><LucideIcon name="trash-2" /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-
             return (
-                <div className="grid lg:grid-cols-4 gap-8">
-                    <div className="lg:col-span-3">
-                        <Table data={orders} type="quote" title="Project Enquiries" />
-                        <Table data={materials} type="material" title="Material Requests" />
-                    </div>
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                            <h3 className="text-xl font-bold mb-6 flex items-center gap-3"><LucideIcon name="printer" /> GST Billing</h3>
-                            <div className="space-y-4">
-                                <input className="w-full bg-white/10 border border-white/5 p-4 rounded-2xl outline-none" placeholder="Client Name" onChange={e => setBill({...bill, client: e.target.value})} />
-                                <input className="w-full bg-white/10 border border-white/5 p-4 rounded-2xl outline-none" placeholder="Amount (₹)" type="number" onChange={e => setBill({...bill, amount: e.target.value})} />
-                                <div className="pt-6 border-t border-white/10 flex justify-between items-center" onClick={generatePDF}>
-                                    <div><p className="text-[10px] opacity-50 font-black tracking-widest uppercase">Total + 18% GST</p><p className="text-2xl font-black text-blue-400">₹{(bill.amount * 1.18).toLocaleString('en-IN')}</p></div>
-                                    <button className="bg-blue-600 p-4 rounded-2xl shadow-xl shadow-blue-500/40"><LucideIcon name="download" /></button>
+                <div className="space-y-8">
+                    <h2 className="text-3xl font-bold">Admin Console</h2>
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                            <h3 className="font-bold mb-4 border-b pb-2">Material Requests</h3>
+                            {materials.map(m => (
+                                <div key={m.id} className="py-2 border-b flex justify-between text-sm">
+                                    <span>{m.name}</span>
+                                    <button onClick={() => handleUpdate(m.id, 'approved', 'material')} className="text-green-600 font-bold">Approve</button>
                                 </div>
-                            </div>
+                            ))}
                         </div>
-                    </div>
-
-                    <div id="invoice-area" className="hidden p-20 bg-white text-slate-900">
-                        <div className="flex justify-between items-start mb-20">
-                            <div><h1 className="text-4xl font-black text-blue-600 mb-2">PRIYA ELECTRICAL</h1><p className="text-slate-500 font-bold uppercase tracking-widest text-xs font-bold">Industrial Vendor & EPC Solutions</p></div>
-                            <div className="text-right font-bold text-sm leading-relaxed text-slate-500 underline underline-offset-8">INVOICE #{Math.floor(Math.random()*10000)}</div>
+                        <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                            <h3 className="font-bold mb-4 border-b pb-2">Quotation Requests</h3>
+                            {orders.map(o => (
+                                <div key={o.id} className="py-2 border-b flex justify-between text-sm">
+                                    <span>{o.name}</span>
+                                    <button onClick={() => handleUpdate(o.id, 'approved', 'quote')} className="text-green-600 font-bold">Approve</button>
+                                </div>
+                            ))}
                         </div>
-                        <div className="mb-20">
-                            <p className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Bill To</p>
-                            <h2 className="text-3xl font-black">{bill.client || 'Valued Client'}</h2>
-                            <p className="text-slate-500 font-medium">{new Date().toLocaleDateString('en-IN', { dateStyle: 'long' })}</p>
-                        </div>
-                        <table className="w-full mb-20">
-                            <thead><tr className="border-b-4 border-slate-900 text-left"><th className="py-6 font-black uppercase text-sm">Description</th><th className="py-6 font-black uppercase text-sm text-right">Amount</th></tr></thead>
-                            <tbody className="divide-y-2 divide-slate-100 font-bold">
-                                <tr><td className="py-8">Industrial Goods / Supply Services</td><td className="py-8 text-right">₹{parseFloat(bill.amount || 0).toLocaleString()}</td></tr>
-                                <tr><td className="py-8">Taxation (GST 18%)</td><td className="py-8 text-right">₹{(bill.amount * 0.18).toLocaleString()}</td></tr>
-                            </tbody>
-                        </table>
-                        <div className="flex justify-end pt-10 border-t-4 border-slate-900"><div className="text-right"><p className="text-xs font-black uppercase text-slate-400 mb-2">Grand Total</p><p className="text-6xl font-black">₹{(bill.amount * 1.18).toLocaleString('en-IN')}</p></div></div>
-                        <div className="mt-40 pt-10 border-t border-slate-100 flex justify-between text-[10px] font-black uppercase tracking-[0.2em] text-slate-400"><span>Generated by PriyaElectrical System</span><span>Certified Industrial Vendor</span></div>
                     </div>
                 </div>
             );
