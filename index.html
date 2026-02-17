@@ -1,398 +1,623 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Priya Electricals | Management Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white; }
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-900 min-h-screen">
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
+import { 
+  ShieldCheck, Zap, Phone, Mail, Trash2, Clock, CheckCircle, 
+  Calculator, Factory, ChevronRight, Cpu, HardHat, Wind, 
+  Lightbulb, Truck, Printer, X, Download
+} from 'lucide-react';
 
-    <!-- NAVIGATION BAR -->
-    <nav class="bg-blue-900 text-white sticky top-0 z-50 shadow-xl no-print">
-        <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-20">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="showView('home')">
-                <div class="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center text-blue-900 shadow-lg">
-                    <i data-lucide="zap" fill="currentColor"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-black tracking-tight leading-none">PRIYA</h1>
-                    <p class="text-[10px] font-bold tracking-[0.2em] text-amber-400 uppercase">Electricals</p>
-                </div>
-            </div>
-            
-            <div class="hidden md:flex items-center gap-2 font-semibold text-sm">
-                <button onclick="showView('home')" class="px-5 py-2 rounded-xl hover:bg-blue-800 transition">Products</button>
-                <button onclick="showView('about')" class="px-5 py-2 rounded-xl hover:bg-blue-800 transition">About Us</button>
-                <button onclick="showView('tracking')" class="px-5 py-2 rounded-xl hover:bg-blue-800 transition">Track Orders</button>
-                <button onclick="showView('tools')" class="px-5 py-2 rounded-xl hover:bg-blue-800 transition text-amber-400 font-bold">Tools & PDF</button>
-                <div class="w-px h-6 bg-blue-700 mx-2"></div>
-                <button onclick="showView('admin')" class="bg-amber-400 text-blue-900 px-6 py-2 rounded-xl font-black hover:bg-amber-300 transition shadow-lg">PRIYA LOGIN</button>
-            </div>
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'priya-electrical-v2';
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [view, setView] = useState('home');
+  const [orders, setOrders] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    onAuthStateChanged(auth, setUser);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const qOrders = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+    const qMaterials = collection(db, 'artifacts', appId, 'public', 'data', 'materials');
+
+    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+      setOrders(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error(err));
+    
+    const unsubMaterials = onSnapshot(qMaterials, (snapshot) => {
+      setMaterials(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error(err));
+
+    return () => { unsubOrders(); unsubMaterials(); };
+  }, [user]);
+
+  const handleSubmit = async (data, type) => {
+    const col = type === 'material' ? 'materials' : 'orders';
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', col), {
+      ...data,
+      userId: user.uid,
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    });
+    setView('track');
+  };
+
+  const updateStatus = async (id, status, type) => {
+    const col = type === 'material' ? 'materials' : 'orders';
+    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id), { status });
+  };
+
+  const handleDelete = async (id, type) => {
+    const col = type === 'material' ? 'materials' : 'orders';
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+      <nav className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+          <div className="bg-blue-600 p-1.5 rounded-lg shadow-blue-200 shadow-lg">
+            <Zap className="text-white w-5 h-5" />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
+            Priya<span className="text-blue-600">Electrical</span>
+          </h1>
         </div>
-    </nav>
-
-    <!-- CONTENT AREA -->
-    <main id="main-content" class="max-w-7xl mx-auto px-6 py-12">
-        <!-- Views will load here -->
-    </main>
-
-    <!-- PDF INVOICE MODAL -->
-    <div id="invoiceModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 backdrop-blur-md p-4 print:p-0 print:bg-white print:relative print:flex">
-        <div class="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-[2rem] shadow-2xl relative print:shadow-none print:rounded-none">
-            <div class="p-6 bg-slate-100 border-b flex justify-between items-center no-print sticky top-0 z-10">
-                <h3 class="font-bold text-slate-600 uppercase tracking-widest text-xs">Tax Invoice Preview</h3>
-                <div class="flex gap-3">
-                    <button onclick="window.print()" class="bg-blue-900 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg"><i data-lucide="printer" size="18"></i> Print / Save PDF</button>
-                    <button onclick="closeModal()" class="bg-white border px-4 py-2 rounded-xl hover:bg-slate-200 transition"><i data-lucide="x" size="20"></i></button>
-                </div>
-            </div>
-            <div id="invoiceContent" class="p-16 text-slate-800">
-                <!-- Dynamic Content -->
-            </div>
+        
+        <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
+          <button onClick={() => setView('home')} className={`hover:text-blue-600 transition-colors ${view === 'home' ? 'text-blue-600' : ''}`}>Home</button>
+          <button onClick={() => setView('about')} className={`hover:text-blue-600 transition-colors ${view === 'about' ? 'text-blue-600' : ''}`}>About</button>
+          <button onClick={() => setView('quote')} className={`hover:text-blue-600 transition-colors ${view === 'quote' ? 'text-blue-600' : ''}`}>Get Quote</button>
+          <button onClick={() => setView('material')} className={`hover:text-blue-600 transition-colors ${view === 'material' ? 'text-blue-600' : ''}`}>Raw Materials</button>
+          <button onClick={() => setView('track')} className={`hover:text-blue-600 transition-colors ${view === 'track' ? 'text-blue-600' : ''}`}>Track</button>
         </div>
+
+        <button 
+          onClick={() => setIsAdmin(!isAdmin)} 
+          className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md"
+        >
+          {isAdmin ? 'Exit Panel' : 'Admin Login'}
+        </button>
+      </nav>
+
+      <main className="max-w-7xl mx-auto p-4 md:p-8">
+        {isAdmin ? (
+          <AdminPanel orders={orders} materials={materials} onUpdate={updateStatus} onDelete={handleDelete} />
+        ) : (
+          <>
+            {view === 'home' && <Home setView={setView} />}
+            {view === 'about' && <About />}
+            {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
+            {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
+            {view === 'track' && <Tracking orders={orders} materials={materials} />}
+          </>
+        )}
+      </main>
     </div>
+  );
+}
 
-    <script>
-        // --- DATA STATE ---
-        let orders = [
-            { id: "PE-9901", client: "Rajesh Khanna", type: "Residential Wiring", status: "Ongoing", date: "2024-05-10" },
-            { id: "PE-9902", client: "L&T Infrastructure", type: "Control Panel Supply", status: "Completed", date: "2024-05-08" }
-        ];
+function Home({ setView }) {
+  const expertises = [
+    { 
+      name: "HT/LT Cables", 
+      desc: "Specialized high-tension industrial wiring for power grids.",
+      img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800",
+      icon: <Zap size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Solar Systems", 
+      desc: "End-to-end solar EPC solutions and infrastructure components.",
+      img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800",
+      icon: <Wind size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Industrial Raw Materials", 
+      desc: "Bulk supply of copper, aluminum, and electrical insulators.",
+      img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800",
+      icon: <Factory size={20} />,
+      link: 'material'
+    },
+    { 
+      name: "Smart Automation", 
+      desc: "PLC systems and intelligent switchgear for factories.",
+      img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800",
+      icon: <Cpu size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Safety Infrastructure", 
+      desc: "Circuit breakers and earthing materials for large plants.",
+      img: "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=800",
+      icon: <ShieldCheck size={20} />,
+      link: 'quote'
+    },
+    { 
+      name: "Logistics Support", 
+      desc: "Fast-tracked delivery for critical electrical components.",
+      img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800",
+      icon: <Truck size={20} />,
+      link: 'material'
+    }
+  ];
 
-        let sourcingRequests = [
-            { id: "SRC-501", vendor: "Vikas Metal", item: "Copper Strips 100kg", date: "2024-05-11" }
-        ];
+  return (
+    <div className="space-y-16 animate-in fade-in duration-700">
+      <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl">
+        <img 
+          src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" 
+          className="absolute inset-0 w-full h-full object-cover scale-105" 
+          alt="Main Banner" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
+          <div className="max-w-3xl">
+            <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full font-bold text-xs tracking-widest uppercase border border-blue-500/30 mb-6 inline-block">Professional Solutions</span>
+            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-[1.1]">
+              Pioneering Modern <span className="text-blue-500">Power</span> Grids.
+            </h2>
+            <p className="text-slate-200 text-xl max-w-xl mb-10 font-medium leading-relaxed">
+              Premium industrial electrical vendor specializing in large-scale infrastructure and high-quality raw material procurement.
+            </p>
+            <div className="flex flex-wrap gap-5">
+              <button onClick={() => setView('quote')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/40 flex items-center gap-2">Get A Free Quote <ChevronRight size={18}/></button>
+              <button onClick={() => setView('about')} className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-bold hover:bg-white/20 transition-all">Our Company Profile</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        // --- NAVIGATION ---
-        function showView(view) {
-            const content = document.getElementById('main-content');
-            window.scrollTo(0,0);
+      <section className="py-10">
+        <div className="text-center mb-16 space-y-3">
+          <h3 className="text-3xl md:text-4xl font-black text-slate-800">Industrial Expertise</h3>
+          <p className="text-slate-500 max-w-2xl mx-auto">We provide specialized services across the entire electrical spectrum, from heavy-duty raw material sourcing to smart grid implementation.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {expertises.map((i, idx) => (
+            <div key={idx} className="group bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full hover:-translate-y-2">
+              <div className="relative h-60 overflow-hidden">
+                <img src={i.img} alt={i.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-3 rounded-2xl text-blue-600 shadow-lg">
+                  {i.icon}
+                </div>
+              </div>
+              <div className="p-8 flex flex-col flex-grow">
+                <h3 className="text-2xl font-bold mb-3 text-slate-800 group-hover:text-blue-600 transition-colors">{i.name}</h3>
+                <p className="text-slate-500 text-sm mb-8 leading-relaxed flex-grow">{i.desc}</p>
+                <button 
+                  onClick={() => setView(i.link)} 
+                  className="flex items-center gap-2 text-blue-600 font-extrabold text-sm group/btn"
+                >
+                  Learn More <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function About() {
+  return (
+    <div className="max-w-5xl mx-auto space-y-12 py-8 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center space-y-4">
+        <h2 className="text-4xl font-extrabold text-slate-900">About PriyaElectrical</h2>
+        <div className="h-1.5 w-24 bg-blue-600 mx-auto rounded-full"></div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-6">
+          <div className="bg-blue-50 border-l-4 border-blue-600 p-6 rounded-r-xl">
+            <h3 className="font-bold text-blue-900 mb-2">Corporate Profile</h3>
+            <p className="text-blue-800/80 leading-relaxed text-sm">
+              We are a verified industrial electrical vendor specializing in high-tension infrastructure. 
+              Known for reliability and certified safety standards.
+            </p>
+          </div>
+          <p className="text-slate-600 leading-relaxed">
+            PriyaElectrical has consistently delivered end-to-end solutions for manufacturing plants, solar farms, 
+            and commercial grids. We bridge the gap between complex engineering needs and reliable component supply.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+              <span className="block text-2xl font-extrabold text-blue-600">500+</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">Projects</span>
+            </div>
+            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+              <span className="block text-2xl font-extrabold text-blue-600">100%</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">Reliability</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+          <h3 className="text-xl font-bold mb-6 text-slate-800">Official Contact Information</h3>
+          <div className="space-y-6">
+            <a href="tel:8147267247" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
+              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Phone size={20}/></div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Phone Number</p>
+                <p className="font-bold text-slate-700 group-hover:text-blue-600">8147267247</p>
+              </div>
+            </a>
+            <a href="mailto:Raju@#324@gmail.com" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
+              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Mail size={20}/></div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Email Support</p>
+                <p className="font-bold text-slate-700 group-hover:text-blue-600">Raju@#324@gmail.com</p>
+              </div>
+            </a>
+            <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                <CheckCircle size={14}/> Verified Vendor
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono uppercase">Mon - Sat Service</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequestForm({ type, onSubmit }) {
+  const [form, setForm] = useState({ name: '', phone: '', company: '', item: 'Standard Quote', details: '' });
+  
+  const isMaterial = type === 'material';
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-in zoom-in duration-300">
+      <div className="flex items-center gap-5 mb-10">
+        <div className="bg-blue-600 p-5 rounded-3xl text-white shadow-lg shadow-blue-200">
+          {isMaterial ? <Factory size={32} /> : <Zap size={32} />}
+        </div>
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 leading-tight">
+            {isMaterial ? 'Material Sourcing' : 'Project Quotation'}
+          </h2>
+          <p className="text-slate-400 font-medium">Professional intake for industrial supply</p>
+        </div>
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-8">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Representative Name</label>
+            <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+              placeholder="e.g. John Doe" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          </div>
+          
+          {isMaterial && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Company Name</label>
+              <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+                placeholder="e.g. Tesla Ind." value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Contact Phone</label>
+            <input required type="tel" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+              placeholder="+91 00000 00000" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+          </div>
+
+          {!isMaterial && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Required Asset</label>
+              <select className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium appearance-none" 
+                value={form.item} onChange={e => setForm({...form, item: e.target.value})}>
+                <option value="Solar Panels">Solar Panels</option>
+                <option value="High Voltage Cables">High Voltage Cables</option>
+                <option value="Industrial Switches">Industrial Switches</option>
+                <option value="Transformers">Transformers</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Specific Requirements</label>
+          <textarea rows="4" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
+            placeholder="Quantity, technical specs, or deadline details..." value={form.details} onChange={e => setForm({...form, details: e.target.value})}></textarea>
+        </div>
+
+        <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-600 hover:-translate-y-1 transition-all shadow-2xl shadow-slate-200 flex justify-center items-center gap-3">
+          Submit Official Request <ChevronRight size={20}/>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function Tracking({ orders, materials }) {
+  const all = [
+    ...orders.map(o => ({...o, type: 'Quote Request', color: 'bg-blue-600'})), 
+    ...materials.map(m => ({...m, type: 'Material Sourcing', color: 'bg-indigo-600'}))
+  ].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Request Tracking</h2>
+        <span className="text-xs font-bold text-slate-400 uppercase">{all.length} Total Requests</span>
+      </div>
+
+      {all.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 text-slate-400">
+          No requests found. Start a new quote to see history.
+        </div>
+      ) : (
+        all.map(item => (
+          <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4 w-full">
+              <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.type}</span>
+                <h3 className="font-bold text-slate-800 text-lg">{item.item || 'General Request'}</h3>
+                <p className="text-xs text-slate-500">{item.company || 'Private Party'} • {new Date(item.timestamp).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider ${
+              item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {item.status}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function AdminPanel({ orders, materials, onUpdate, onDelete }) {
+  const [bill, setBill] = useState({ amount: '', rate: '18', client: '', invNo: 'INV-' + Math.floor(Math.random() * 90000 + 10000) });
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  const gstAmt = (parseFloat(bill.amount || 0) * (parseFloat(bill.rate) / 100)).toFixed(2);
+  const total = (parseFloat(bill.amount || 0) + parseFloat(gstAmt)).toFixed(2);
+
+  const handleDownload = async () => {
+    if (!window.html2pdf) {
+      alert("PDF library is still loading. Please wait a moment.");
+      return;
+    }
+    setIsExporting(true);
+    const element = document.getElementById('printable-bill');
+    const opt = {
+      margin: 10,
+      filename: `Invoice_${bill.invNo}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 3, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await window.html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error("PDF Export failed", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const RequestList = ({ items, title, type }) => (
+    <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden mb-10">
+      <div className="bg-slate-50 p-7 flex justify-between items-center border-b border-slate-200">
+        <h3 className="font-black text-slate-800 flex items-center gap-3 uppercase tracking-wider text-sm">
+          <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+            {type === 'material' ? <Factory size={18}/> : <Zap size={18}/>}
+          </div>
+          {title}
+        </h3>
+        <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full font-black uppercase tracking-widest">{items.length}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-black tracking-widest">
+            <tr>
+              <th className="px-8 py-5">Client Contact</th>
+              <th className="px-8 py-5">Request Detail</th>
+              <th className="px-8 py-5">Status</th>
+              <th className="px-8 py-5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {items.map(i => (
+              <tr key={i.id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-8 py-6">
+                  <div className="font-black text-slate-800">{i.name}</div>
+                  <div className="text-[11px] text-slate-400 font-bold">{i.company || 'N/A'} • {i.phone}</div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="text-sm font-bold text-slate-600">{i.item || 'N/A'}</span>
+                  <div className="text-[10px] text-slate-400 truncate max-w-[200px]">{i.details}</div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-lg ${
+                    i.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                  }`}>
+                    {i.status}
+                  </span>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => onUpdate(i.id, 'pending', type)} className="p-2.5 bg-slate-100 hover:bg-amber-100 rounded-xl text-slate-500 hover:text-amber-600 transition-all"><Clock size={16}/></button>
+                    <button onClick={() => onUpdate(i.id, 'approved', type)} className="p-2.5 bg-slate-100 hover:bg-green-100 rounded-xl text-slate-500 hover:text-green-600 transition-all"><CheckCircle size={16}/></button>
+                    <button onClick={() => onDelete(i.id, type)} className="p-2.5 bg-slate-100 hover:bg-red-100 rounded-xl text-slate-500 hover:text-red-500 transition-all"><Trash2 size={16}/></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No active data</div>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="grid lg:grid-cols-4 gap-10">
+      {showInvoice && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            <div className="p-10" id="printable-bill">
+              <div className="flex justify-between items-start mb-12">
+                <div>
+                  <h1 className="text-3xl font-black text-slate-900 mb-1">INVOICE</h1>
+                  <p className="text-slate-400 font-bold tracking-widest uppercase text-xs">{bill.invNo}</p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end mb-1">
+                    <Zap className="text-blue-600 w-5 h-5" fill="currentColor" />
+                    <span className="font-black text-xl text-slate-900">PriyaElectrical</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold">Industrial Vendor • 8147267247</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-10 mb-12">
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Billed To</h4>
+                  <p className="font-black text-slate-800 text-lg uppercase">{bill.client || 'Valued Client'}</p>
+                  <p className="text-slate-500 text-xs font-bold">Project Procurement</p>
+                </div>
+                <div className="text-right">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Issue Date</h4>
+                  <p className="font-black text-slate-800">{new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="border-t-2 border-slate-100 py-8 space-y-4">
+                <div className="flex justify-between font-bold text-slate-400 uppercase text-[10px] tracking-widest px-4">
+                  <span>Description</span>
+                  <span>Amount</span>
+                </div>
+                <div className="flex justify-between font-black text-slate-800 bg-slate-50 p-5 rounded-2xl">
+                  <span>Industrial Supply Service</span>
+                  <span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-8">
+                <div className="w-64 space-y-3">
+                  <div className="flex justify-between text-slate-500 font-bold text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400 font-bold text-sm italic">
+                    <span>GST ({bill.rate}%)</span>
+                    <span>₹{gstAmt}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-900 font-black text-2xl pt-4 border-t border-slate-200">
+                    <span>Total</span>
+                    <span>₹{total}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             
-            if (view === 'home') {
-                content.innerHTML = `
-                    <div class="bg-blue-900 rounded-[3rem] p-16 text-white relative overflow-hidden shadow-2xl mb-16">
-                        <div class="relative z-10">
-                            <h2 class="text-6xl font-black mb-6 leading-tight">Expert Electrical<br>Engineering.</h2>
-                            <p class="text-blue-200 text-xl mb-10 max-w-xl">Supplying high-grade industrial components and infrastructure solutions since 2018.</p>
-                            <div class="flex flex-wrap gap-4">
-                                <button onclick="showView('request')" class="bg-amber-400 text-blue-900 px-10 py-4 rounded-2xl font-black text-lg hover:scale-105 transition shadow-xl">Get a Quote</button>
-                                <button onclick="showView('sourcing')" class="bg-white/10 px-10 py-4 rounded-2xl font-bold border border-white/20 hover:bg-white/20 transition">Sell Raw Materials</button>
-                            </div>
-                        </div>
-                        <div class="absolute top-0 right-0 p-10 opacity-10"><i data-lucide="zap" size="300"></i></div>
-                    </div>
+            <div className="bg-slate-50 p-6 flex gap-4 no-print">
+              <button 
+                disabled={isExporting}
+                onClick={handleDownload} 
+                className={`flex-1 ${isExporting ? 'bg-blue-400' : 'bg-blue-600'} text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95`}
+              >
+                <Download size={16}/> {isExporting ? 'Generating...' : 'Download & Print'}
+              </button>
+              <button onClick={() => setShowInvoice(false)} className="flex-1 bg-slate-200 text-slate-800 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                <X size={16}/> Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        ${renderProduct('Distribution Panel', '₹65,000', 'layers')}
-                        ${renderProduct('Inverter Systems', '₹15,400', 'battery-charging')}
-                        ${renderProduct('Heavy Duty MCB', '₹4,200', 'shield-check')}
-                        ${renderProduct('Industrial Cabling', '₹1,200/m', 'git-commit')}
-                    </div>
-                `;
-            } else if (view === 'about') {
-                content.innerHTML = `
-                    <div class="max-w-4xl mx-auto space-y-16">
-                        <div class="text-center">
-                            <h2 class="text-5xl font-black text-blue-900 mb-6 uppercase tracking-tight">Company Profile</h2>
-                            <p class="text-slate-500 text-lg">Leading the market in industrial power distribution.</p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="bg-white p-10 rounded-[2rem] border shadow-sm text-center">
-                                <p class="text-4xl font-black text-blue-900">₹4.2 Cr</p>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Annual Turnover</p>
-                            </div>
-                            <div class="bg-white p-10 rounded-[2rem] border shadow-sm text-center">
-                                <p class="text-4xl font-black text-amber-500">120+</p>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Product Lines</p>
-                            </div>
-                            <div class="bg-white p-10 rounded-[2rem] border shadow-sm text-center">
-                                <p class="text-4xl font-black text-green-600">85+</p>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Clients Served</p>
-                            </div>
-                        </div>
-                        <div class="bg-blue-900 text-white p-16 rounded-[3rem] shadow-2xl">
-                            <h3 class="text-3xl font-bold mb-6 text-amber-400">Our Manufacturing Focus</h3>
-                            <p class="text-blue-100 text-lg leading-relaxed mb-8">Priya Electricals operates out of a specialized engineering facility. We focus on HT/LT Switchgear, Power Distribution Boards, and smart automation systems for modern industries.</p>
-                            <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <li class="flex items-center gap-3"><i data-lucide="check" class="text-amber-400"></i> ISO 9001 Certified</li>
-                                <li class="flex items-center gap-3"><i data-lucide="check" class="text-amber-400"></i> Government Approved Vendor</li>
-                                <li class="flex items-center gap-3"><i data-lucide="check" class="text-amber-400"></i> Pan-India Logistics</li>
-                                <li class="flex items-center gap-3"><i data-lucide="check" class="text-amber-400"></i> 24/7 Support</li>
-                            </ul>
-                        </div>
-                    </div>
-                `;
-            } else if (view === 'tools') {
-                content.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        <!-- Percentage Calc -->
-                        <div class="bg-white p-10 rounded-[2.5rem] border shadow-xl">
-                            <h3 class="text-2xl font-black mb-8 flex items-center gap-3 text-blue-900"><i data-lucide="calculator"></i> Percentage Tool</h3>
-                            <div class="space-y-6">
-                                <div>
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Principal Amount (₹)</label>
-                                    <input id="cAmt" type="number" value="1000000" class="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl text-2xl font-black">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-2">Percentage Rate (%)</label>
-                                    <input id="cPrc" type="number" value="8" class="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl text-2xl font-black">
-                                </div>
-                                <div id="cRes" class="p-8 bg-blue-900 text-white rounded-3xl text-center">
-                                    <p class="text-xs font-bold text-blue-300 uppercase mb-2">Calculated Margin</p>
-                                    <p class="text-5xl font-black">₹80,000</p>
-                                </div>
-                                <button onclick="doCalc()" class="w-full bg-amber-400 text-blue-900 py-5 rounded-2xl font-black text-lg hover:bg-amber-300 transition shadow-lg">RE-CALCULATE</button>
-                            </div>
-                        </div>
+      <div className="lg:col-span-3">
+        <RequestList items={materials} title="Raw Material Queue" type="material" />
+        <RequestList items={orders} title="Quotations Queue" type="quote" />
+      </div>
+      
+      <div className="lg:col-span-1 space-y-8">
+        <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl"></div>
+          <h3 className="font-black text-2xl mb-8 flex items-center gap-3">
+            <div className="bg-blue-600 p-2.5 rounded-xl"><Calculator size={22}/></div>
+            GST Billing
+          </h3>
+          
+          <div className="space-y-6 relative z-10">
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Client Name</label>
+              <input type="text" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold" 
+                placeholder="Client Name" value={bill.client} onChange={e => setBill({...bill, client: e.target.value})}/>
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Base Amount (₹)</label>
+              <input type="number" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold" 
+                placeholder="0.00" value={bill.amount} onChange={e => setBill({...bill, amount: e.target.value})}/>
+            </div>
+            <div>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">GST Rate (%)</label>
+              <select className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:border-blue-500 text-white font-bold appearance-none" 
+                value={bill.rate} onChange={e => setBill({...bill, rate: e.target.value})}>
+                <option value="5" className="text-slate-900">5% Essentials</option>
+                <option value="12" className="text-slate-900">12% Equipment</option>
+                <option value="18" className="text-slate-900">18% Standard</option>
+                <option value="28" className="text-slate-900">28% Luxury</option>
+              </select>
+            </div>
+            
+            <div className="bg-white/5 p-6 rounded-3xl space-y-3 border border-white/5">
+              <div className="flex justify-between text-xs text-slate-400 font-bold"><span>Subtotal:</span><span>₹{parseFloat(bill.amount || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between text-xs text-blue-400 font-bold uppercase tracking-widest"><span>GST ({bill.rate}%):</span><span>₹{gstAmt}</span></div>
+              <div className="flex justify-between font-black text-2xl pt-5 border-t border-white/10 mt-3"><span>Total:</span><span className="text-blue-500">₹{total}</span></div>
+            </div>
 
-                        <!-- PDF Generator -->
-                        <div class="bg-white p-10 rounded-[2.5rem] border shadow-xl">
-                            <h3 class="text-2xl font-black mb-8 flex items-center gap-3 text-blue-900"><i data-lucide="file-text"></i> GST Bill Generator</h3>
-                            <div class="space-y-4">
-                                <input id="invName" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold" placeholder="Client Name">
-                                <input id="invDesc" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl" placeholder="Service Description">
-                                <div class="flex gap-4">
-                                    <input id="invAmt" type="number" class="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-bold" placeholder="Amount (₹)">
-                                    <select id="invGst" class="bg-slate-50 border-2 border-slate-100 p-4 rounded-xl font-black">
-                                        <option value="18">18% GST</option>
-                                        <option value="12">12% GST</option>
-                                        <option value="5">5% GST</option>
-                                    </select>
-                                </div>
-                                <button onclick="makeInvoice()" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black text-lg hover:bg-blue-800 transition shadow-lg mt-6 uppercase">Generate PDF Bill</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (view === 'request') {
-                content.innerHTML = `
-                    <div class="max-w-xl mx-auto bg-white p-12 rounded-[3rem] border shadow-2xl">
-                        <h2 class="text-3xl font-black text-center mb-10 text-blue-900 uppercase">Service Request</h2>
-                        <form onsubmit="handleOrder(event)" class="space-y-5">
-                            <input name="name" required class="w-full border-2 border-slate-100 p-5 rounded-2xl bg-slate-50" placeholder="Full Name">
-                            <input name="phone" required class="w-full border-2 border-slate-100 p-5 rounded-2xl bg-slate-50" placeholder="Contact Number">
-                            <select name="type" class="w-full border-2 border-slate-100 p-5 rounded-2xl bg-slate-50 font-bold">
-                                <option>Industrial Panel Setup</option>
-                                <option>Home Smart Wiring</option>
-                                <option>Solar Panel Installation</option>
-                            </select>
-                            <button type="submit" class="w-full bg-blue-900 text-white py-5 rounded-2xl font-black text-xl hover:bg-blue-800 shadow-xl transition">Submit Order</button>
-                        </form>
-                    </div>
-                `;
-            } else if (view === 'sourcing') {
-                content.innerHTML = `
-                    <div class="max-w-xl mx-auto bg-slate-900 text-white p-12 rounded-[3rem] shadow-2xl border-4 border-amber-400">
-                        <h2 class="text-3xl font-black text-center mb-4 text-amber-400 uppercase">Vendor Portal</h2>
-                        <p class="text-center text-slate-400 mb-10 text-sm font-bold">Sell raw materials to Priya Electricals</p>
-                        <form onsubmit="handleSource(event)" class="space-y-5">
-                            <input name="vendor" required class="w-full bg-slate-800 border-none p-5 rounded-2xl text-white font-bold" placeholder="Vendor / Company Name">
-                            <input name="phone" required class="w-full bg-slate-800 border-none p-5 rounded-2xl text-white" placeholder="Phone Number">
-                            <textarea name="items" required class="w-full bg-slate-800 border-none p-5 rounded-2xl text-white h-32" placeholder="List materials and quantities (e.g., 500m Aluminum cable)..."></textarea>
-                            <button type="submit" class="w-full bg-amber-400 text-blue-900 py-5 rounded-2xl font-black text-xl hover:scale-105 shadow-xl transition">Submit Offer</button>
-                        </form>
-                    </div>
-                `;
-            } else if (view === 'tracking') {
-                content.innerHTML = `
-                    <h2 class="text-3xl font-black mb-10 text-blue-900 uppercase tracking-tight">Order Tracking</h2>
-                    <div class="bg-white rounded-[2rem] border overflow-hidden shadow-sm">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] border-b">
-                                <tr><th class="p-8">Order ID</th><th class="p-8">Client</th><th class="p-8">Category</th><th class="p-8">Status</th></tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                ${orders.map(o => `
-                                    <tr class="hover:bg-slate-50 transition">
-                                        <td class="p-8 font-mono text-blue-600 font-bold">${o.id}</td>
-                                        <td class="p-8 font-bold text-slate-800">${o.client}</td>
-                                        <td class="p-8 text-slate-500">${o.type}</td>
-                                        <td class="p-8"><span class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">${o.status}</span></td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            } else if (view === 'admin') {
-                content.innerHTML = `
-                    <div class="space-y-12">
-                        <div class="flex justify-between items-end">
-                            <h2 class="text-4xl font-black text-blue-900 uppercase">Management Console</h2>
-                            <p class="text-xs font-bold text-slate-400">Authenticated as PRIYA ADMIN</p>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                            <div class="bg-white border rounded-[2rem] shadow-sm overflow-hidden">
-                                <div class="p-6 bg-blue-900 text-white font-black flex justify-between">Client Pipeline <span>${orders.length}</span></div>
-                                <div class="divide-y">
-                                    ${orders.map(o => `<div class="p-6 flex justify-between items-center hover:bg-slate-50 transition"><div class="font-bold">${o.client}</div><div class="text-xs bg-slate-100 p-2 rounded-lg font-bold">${o.date}</div></div>`).join('')}
-                                </div>
-                            </div>
-                            <div class="bg-white border rounded-[2rem] shadow-sm overflow-hidden border-amber-200">
-                                <div class="p-6 bg-amber-400 text-blue-900 font-black flex justify-between">Sourcing Requests (Vendor) <span>${sourcingRequests.length}</span></div>
-                                <div class="divide-y">
-                                    ${sourcingRequests.map(s => `<div class="p-6 hover:bg-amber-50 transition"><div class="font-black text-blue-900">${s.vendor}</div><div class="text-xs text-slate-500 mt-1">${s.item}</div></div>`).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            lucide.createIcons();
-        }
+            <button onClick={() => setShowInvoice(true)} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl shadow-blue-500/30 flex items-center justify-center gap-3 active:scale-95">
+              <Printer size={18}/> Generate Official Invoice
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        // --- COMPONENTS ---
-        function renderProduct(name, price, icon) {
-            return `<div class="bg-white p-8 rounded-[2.5rem] border shadow-sm hover:shadow-xl transition-all duration-300 group">
-                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition">
-                    <i data-lucide="${icon}"></i>
-                </div>
-                <h4 class="font-black text-slate-800 text-lg">${name}</h4>
-                <p class="text-blue-600 font-black text-xl mt-3">${price}</p>
-            </div>`;
-        }
-
-        // --- ACTIONS ---
-        function doCalc() {
-            const a = document.getElementById('cAmt').value;
-            const p = document.getElementById('cPrc').value;
-            const res = (a * p) / 100;
-            document.getElementById('cRes').innerHTML = `
-                <p class="text-xs font-bold text-blue-300 uppercase mb-2">Calculated Margin</p>
-                <p class="text-5xl font-black">₹${res.toLocaleString()}</p>
-            `;
-        }
-
-        function makeInvoice() {
-            const name = document.getElementById('invName').value || "Valued Client";
-            const desc = document.getElementById('invDesc').value || "Electrical Services & Materials";
-            const amt = Number(document.getElementById('invAmt').value);
-            const gstP = Number(document.getElementById('invGst').value);
-            const gstVal = (amt * gstP) / 100;
-
-            document.getElementById('invoiceContent').innerHTML = `
-                <div class="flex justify-between items-start border-b-4 border-blue-900 pb-12 mb-12">
-                    <div>
-                        <h1 class="text-4xl font-black text-blue-900 uppercase leading-none">PRIYA ELECTRICALS</h1>
-                        <p class="text-xs font-black text-slate-400 tracking-[0.3em] mt-2 uppercase">Engineered Solutions</p>
-                        <p class="text-sm mt-6 text-slate-500">GSTIN: 27AAAPP1234A1Z5</p>
-                    </div>
-                    <div class="text-right">
-                        <h2 class="text-4xl font-light text-slate-300 tracking-tighter uppercase">Tax Invoice</h2>
-                        <p class="text-sm font-bold mt-4">Invoice No: ${Math.floor(Math.random()*9000)+1000}</p>
-                        <p class="text-sm">Date: ${new Date().toLocaleDateString()}</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-20 mb-16">
-                    <div>
-                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Invoice To</h3>
-                        <p class="text-2xl font-black text-slate-800">${name}</p>
-                    </div>
-                    <div class="text-right">
-                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Payment Status</h3>
-                        <p class="text-xl font-bold text-amber-500 uppercase tracking-widest">DUE ON RECEIPT</p>
-                    </div>
-                </div>
-
-                <table class="w-full text-left border-collapse mb-16">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="p-6 font-black uppercase text-xs tracking-widest border-b">Item Description</th>
-                            <th class="p-6 font-black uppercase text-xs tracking-widest border-b text-right">Tax Rate</th>
-                            <th class="p-6 font-black uppercase text-xs tracking-widest border-b text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <tr>
-                            <td class="p-8 font-bold text-slate-700">${desc}</td>
-                            <td class="p-8 text-right font-medium text-slate-500">${gstP}%</td>
-                            <td class="p-8 text-right font-black text-slate-900">₹${amt.toLocaleString()}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="flex justify-end">
-                    <div class="w-80 space-y-4">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-400 font-bold uppercase">Subtotal</span>
-                            <span class="font-bold text-slate-800">₹${amt.toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-slate-400 font-bold uppercase">GST (${gstP}%)</span>
-                            <span class="font-bold text-slate-800">₹${gstVal.toLocaleString()}</span>
-                        </div>
-                        <div class="h-px bg-slate-200"></div>
-                        <div class="flex justify-between items-center pt-2">
-                            <span class="text-xl font-black text-blue-900 uppercase">Grand Total</span>
-                            <span class="text-3xl font-black text-blue-900">₹${(amt + gstVal).toLocaleString()}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-32 pt-10 border-t flex justify-between items-center text-[9px] text-slate-400">
-                    <div class="max-w-xs leading-relaxed uppercase tracking-widest font-bold">
-                        1. All disputes are subject to local jurisdiction.<br>
-                        2. Goods once sold cannot be returned.
-                    </div>
-                    <div class="text-center">
-                        <div class="w-40 h-px bg-slate-300 mb-2"></div>
-                        <p class="font-black text-slate-900 text-[10px] uppercase">Authorised Signatory</p>
-                    </div>
-                </div>
-            `;
-            document.getElementById('invoiceModal').classList.remove('hidden');
-            document.getElementById('invoiceModal').classList.add('flex');
-            lucide.createIcons();
-        }
-
-        function closeModal() {
-            document.getElementById('invoiceModal').classList.add('hidden');
-        }
-
-        function handleOrder(e) {
-            e.preventDefault();
-            const f = e.target;
-            orders.unshift({
-                id: "PE-" + Math.floor(1000 + Math.random()*9000),
-                client: f.name.value,
-                type: f.type.value,
-                status: "Pending",
-                date: new Date().toISOString().split('T')[0]
-            });
-            showView('tracking');
-        }
-
-        function handleSource(e) {
-            e.preventDefault();
-            const f = e.target;
-            sourcingRequests.unshift({
-                id: "SRC-" + Math.floor(100 + Math.random()*900),
-                vendor: f.vendor.value,
-                item: f.items.value,
-                date: new Date().toISOString().split('T')[0]
-            });
-            alert("Your offer has been sent to Priya's internal sourcing storage.");
-            showView('home');
-        }
-
-        window.onload = () => showView('home');
-    </script>
-</body>
-</html>
+const style = document.createElement('style');
+style.innerHTML = `
+  @media print {
+    body * { visibility: hidden; }
+    #printable-bill, #printable-bill * { visibility: visible; }
+    #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+    .no-print { display: none !important; }
+  }
+`;
+document.head.appendChild(style);
+                                    
