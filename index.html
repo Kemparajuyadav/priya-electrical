@@ -1,314 +1,201 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
-import { 
-  ShieldCheck, Zap, Phone, Mail, Trash2, Clock, CheckCircle, 
-  Calculator, Factory, ChevronRight, Cpu, HardHat, Wind, 
-  Lightbulb, Truck, Printer, X, Download
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriyaElectrical | Industrial Vendor Portal</title>
 
-// --- Firebase Configuration ---
-// Ensure these variables are defined in your environment or replace with strings
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'priya-electrical-v2';
-
-// --- Main Application Component ---
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [view, setView] = useState('home');
-  const [orders, setOrders] = useState([]);
-  const [materials, setMaterials] = useState([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    // Load html2pdf library for invoice generation
-    const script = document.createElement('script');
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-      }
-    };
-    initAuth();
-    onAuthStateChanged(auth, setUser);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const qOrders = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
-    const qMaterials = collection(db, 'artifacts', appId, 'public', 'data', 'materials');
-
-    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-      setOrders(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error(err));
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    const unsubMaterials = onSnapshot(qMaterials, (snapshot) => {
-      setMaterials(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error(err));
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    return () => { unsubOrders(); unsubMaterials(); };
-  }, [user]);
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { brand: '#2563eb' }
+                }
+            }
+        }
+    </script>
 
-  const handleSubmit = async (data, type) => {
-    const col = type === 'material' ? 'materials' : 'orders';
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', col), {
-      ...data,
-      userId: user.uid,
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    });
-    setView('track');
-  };
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.8); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
 
-  const updateStatus = async (id, status, type) => {
-    const col = type === 'material' ? 'materials' : 'orders';
-    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id), { status });
-  };
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-  const handleDelete = async (id, type) => {
-    const col = type === 'material' ? 'materials' : 'orders';
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
-  };
+        // Simple SVG Icons
+        const IconZap = () => (
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+        );
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-          <div className="bg-blue-600 p-1.5 rounded-lg shadow-blue-200 shadow-lg">
-            <Zap className="text-white w-5 h-5" />
-          </div>
-          <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
-            Priya<span className="text-blue-600">Electrical</span>
-          </h1>
-        </div>
-        
-        <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
-          <button onClick={() => setView('home')} className={`hover:text-blue-600 transition-colors ${view === 'home' ? 'text-blue-600' : ''}`}>Home</button>
-          <button onClick={() => setView('about')} className={`hover:text-blue-600 transition-colors ${view === 'about' ? 'text-blue-600' : ''}`}>About</button>
-          <button onClick={() => setView('quote')} className={`hover:text-blue-600 transition-colors ${view === 'quote' ? 'text-blue-600' : ''}`}>Get Quote</button>
-          <button onClick={() => setView('material')} className={`hover:text-blue-600 transition-colors ${view === 'material' ? 'text-blue-600' : ''}`}>Raw Materials</button>
-          <button onClick={() => setView('track')} className={`hover:text-blue-600 transition-colors ${view === 'track' ? 'text-blue-600' : ''}`}>Track</button>
-        </div>
+        function App() {
+            const [view, setView] = useState('home');
+            const [isAdmin, setIsAdmin] = useState(false);
 
-        <button 
-          onClick={() => setIsAdmin(!isAdmin)} 
-          className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md"
-        >
-          {isAdmin ? 'Exit Panel' : 'Admin Login'}
-        </button>
-      </nav>
+            return (
+                <div className="min-h-screen">
+                    {/* NAVBAR */}
+                    <nav className="glass sticky top-0 z-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+                            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg">
+                                <IconZap />
+                            </div>
+                            <h1 className="text-xl font-extrabold tracking-tight">
+                                Priya<span className="text-blue-600">Electrical</span>
+                            </h1>
+                        </div>
+                        
+                        <div className="hidden md:flex gap-8 text-sm font-bold text-slate-600">
+                            <button onClick={() => setView('home')} className={view === 'home' ? 'text-blue-600' : ''}>Home</button>
+                            <button onClick={() => setView('quote')} className={view === 'quote' ? 'text-blue-600' : ''}>Get Quote</button>
+                            <button onClick={() => setView('track')} className={view === 'track' ? 'text-blue-600' : ''}>Track Status</button>
+                        </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4 md:p-8">
-        {isAdmin ? (
-          <AdminPanel orders={orders} materials={materials} onUpdate={updateStatus} onDelete={handleDelete} />
-        ) : (
-          <>
-            {view === 'home' && <Home setView={setView} />}
-            {view === 'about' && <About />}
-            {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
-            {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
-            {view === 'track' && <Tracking orders={orders} materials={materials} />}
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
+                        <button 
+                            onClick={() => setIsAdmin(!isAdmin)} 
+                            className="bg-slate-900 text-white px-5 py-2 rounded-full text-xs font-bold hover:scale-105 transition-transform"
+                        >
+                            {isAdmin ? 'Exit Admin' : 'Admin Login'}
+                        </button>
+                    </nav>
 
-// --- Sub-Components ---
+                    {/* CONTENT */}
+                    <main className="max-w-6xl mx-auto p-6">
+                        {isAdmin ? <AdminPanel /> : (
+                            <div>
+                                {view === 'home' && <Home setView={setView} />}
+                                {view === 'quote' && <QuoteForm />}
+                                {view === 'track' && <Tracking />}
+                            </div>
+                        )}
+                    </main>
 
-function Home({ setView }) {
-  const expertises = [
-    { name: "HT/LT Cables", desc: "Specialized high-tension industrial wiring.", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800", icon: <Zap size={20} />, link: 'quote' },
-    { name: "Solar Systems", desc: "End-to-end solar EPC solutions.", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800", icon: <Wind size={20} />, link: 'quote' },
-    { name: "Raw Materials", desc: "Bulk supply of copper and aluminum.", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800", icon: <Factory size={20} />, link: 'material' },
-    { name: "Automation", desc: "PLC systems for intelligent factories.", img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800", icon: <Cpu size={20} />, link: 'quote' },
-    { name: "Safety Gear", desc: "Circuit breakers and earthing.", img: "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=800", icon: <ShieldCheck size={20} />, link: 'quote' },
-    { name: "Logistics", desc: "Fast-tracked industrial delivery.", img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800", icon: <Truck size={20} />, link: 'material' }
-  ];
+                    {/* FOOTER */}
+                    <footer className="mt-20 border-t border-slate-200 py-10 text-center text-slate-400 text-sm">
+                        <p>© 2026 PriyaElectrical Industrial Solutions. Contact: 8147267247</p>
+                    </footer>
+                </div>
+            );
+        }
 
-  return (
-    <div className="space-y-16 animate-in fade-in duration-700">
-      <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl">
-        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" className="absolute inset-0 w-full h-full object-cover" alt="Banner" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
-          <div className="max-w-3xl">
-            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6">Pioneering Modern <span className="text-blue-500">Power</span>.</h2>
-            <button onClick={() => setView('quote')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 shadow-xl flex items-center gap-2">Get Quote <ChevronRight size={18}/></button>
-          </div>
-        </div>
-      </section>
+        function Home({ setView }) {
+            return (
+                <div className="space-y-20 animate-in">
+                    <section className="relative h-[450px] rounded-[2rem] overflow-hidden bg-slate-900 shadow-2xl mt-4">
+                        <img 
+                            src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" 
+                            className="absolute inset-0 w-full h-full object-cover opacity-60" 
+                        />
+                        <div className="absolute inset-0 flex flex-col justify-center p-12 md:p-20">
+                            <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">
+                                Industrial <br/><span className="text-blue-500">Power</span> Delivery.
+                            </h2>
+                            <p className="text-slate-200 mt-6 max-w-lg text-lg">Leading vendor for HT/LT Cables, Solar Systems, and Electrical Raw Materials.</p>
+                            <button 
+                                onClick={() => setView('quote')}
+                                className="mt-8 bg-blue-600 text-white w-fit px-10 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 shadow-xl"
+                            >
+                                Request Quotation
+                            </button>
+                        </div>
+                    </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-        {expertises.map((i, idx) => (
-          <div key={idx} className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all p-6">
-            <div className="h-40 bg-slate-100 rounded-2xl mb-4 overflow-hidden">
-               <img src={i.img} className="w-full h-full object-cover" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">{i.name}</h3>
-            <p className="text-slate-500 text-sm mb-4">{i.desc}</p>
-            <button onClick={() => setView(i.link)} className="text-blue-600 font-bold text-sm flex items-center gap-1">Learn More <ChevronRight size={14}/></button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+                    <div className="grid md:grid-cols-3 gap-8">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                            <div className="text-blue-600 mb-4 font-black">01.</div>
+                            <h3 className="text-xl font-bold mb-2">Cable Solutions</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">High-tension and low-tension industrial cabling for heavy machinery.</p>
+                        </div>
+                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-white bg-blue-600">
+                            <div className="text-blue-200 mb-4 font-black">02.</div>
+                            <h3 className="text-xl font-bold mb-2">Solar EPC</h3>
+                            <p className="text-blue-100 text-sm leading-relaxed">End-to-end solar grid installation and maintenance.</p>
+                        </div>
+                        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                            <div className="text-blue-600 mb-4 font-black">03.</div>
+                            <h3 className="text-xl font-bold mb-2">Raw Materials</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">Copper, Aluminum, and specialized electrical components.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
-function About() {
-  return (
-    <div className="max-w-4xl mx-auto py-10 space-y-8">
-      <h2 className="text-3xl font-black text-center">About PriyaElectrical</h2>
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-           <h3 className="font-bold text-xl mb-4">Our Vision</h3>
-           <p className="text-slate-600">To be the primary backbone for industrial electrical infrastructure in the region, delivering safety and efficiency.</p>
-        </div>
-        <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-sm">
-           <h3 className="font-bold text-xl mb-4">Contact Info</h3>
-           <div className="space-y-4">
-              <p className="flex items-center gap-2"><Phone size={16}/> 8147267247</p>
-              <p className="flex items-center gap-2"><Mail size={16}/> Raju@#324@gmail.com</p>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        function QuoteForm() {
+            return (
+                <div className="max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+                    <h2 className="text-3xl font-black mb-2">Get a Quote</h2>
+                    <p className="text-slate-400 mb-8">Our engineers will review your request within 24 hours.</p>
+                    <div className="space-y-4">
+                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none" placeholder="Company Name" />
+                        <input className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none" placeholder="Contact Number" />
+                        <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 ring-blue-500 outline-none h-32" placeholder="List your requirements (e.g., 500m HT Cable)"></textarea>
+                        <button className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
+                            Submit Inquiry
+                        </button>
+                    </div>
+                </div>
+            );
+        }
 
-function RequestForm({ type, onSubmit }) {
-  const [form, setForm] = useState({ name: '', phone: '', company: '', item: 'Standard Quote', details: '' });
-  const isMaterial = type === 'material';
+        function Tracking() {
+            return (
+                <div className="max-w-2xl mx-auto text-center py-10">
+                    <h2 className="text-2xl font-bold mb-6">Track Your Request</h2>
+                    <div className="bg-white p-6 rounded-3xl border border-slate-100 flex items-center justify-between text-left">
+                        <div>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Order #PE-9021</p>
+                            <p className="font-bold text-lg">Industrial Solar Setup</p>
+                        </div>
+                        <span className="bg-amber-100 text-amber-600 px-4 py-1 rounded-full text-xs font-black uppercase">Pending Review</span>
+                    </div>
+                    <p className="mt-8 text-slate-400 text-sm italic">Enter your phone number to see more records...</p>
+                </div>
+            );
+        }
 
-  return (
-    <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
-      <h2 className="text-3xl font-black mb-8">{isMaterial ? 'Material Sourcing' : 'Project Quotation'}</h2>
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-6">
-        <input required className="w-full p-4 bg-slate-50 border rounded-2xl" placeholder="Your Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-        {isMaterial && <input required className="w-full p-4 bg-slate-50 border rounded-2xl" placeholder="Company" value={form.company} onChange={e => setForm({...form, company: e.target.value})} />}
-        <input required className="w-full p-4 bg-slate-50 border rounded-2xl" placeholder="Phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
-        <textarea className="w-full p-4 bg-slate-50 border rounded-2xl" placeholder="Details..." rows="4" value={form.details} onChange={e => setForm({...form, details: e.target.value})}></textarea>
-        <button className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">Submit Request</button>
-      </form>
-    </div>
-  );
-}
+        function AdminPanel() {
+            return (
+                <div className="space-y-6">
+                    <h2 className="text-3xl font-black">Admin Dashboard</h2>
+                    <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Client</th>
+                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Request</th>
+                                    <th className="p-6 font-bold text-slate-500 text-xs uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                <tr>
+                                    <td className="p-6"><b>Raju Electricals</b><br/><span className="text-xs text-slate-400">8147267247</span></td>
+                                    <td className="p-6 text-sm text-slate-600">200m Armor Cable, 50 Switches</td>
+                                    <td className="p-6"><button className="text-blue-600 text-xs font-bold underline">Approve</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
 
-function Tracking({ orders, materials }) {
-  const all = [...orders, ...materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-  return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <h2 className="text-2xl font-bold mb-6">Track Your Requests</h2>
-      {all.map(item => (
-        <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center">
-          <div>
-            <h3 className="font-bold">{item.item || 'General Request'}</h3>
-            <p className="text-xs text-slate-400">{new Date(item.timestamp).toLocaleDateString()}</p>
-          </div>
-          <span className={`px-4 py-1 rounded-full text-xs font-bold uppercase ${item.status === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}`}>{item.status}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminPanel({ orders, materials, onUpdate, onDelete }) {
-  const [bill, setBill] = useState({ amount: '', rate: '18', client: '', invNo: 'INV-' + Math.floor(Math.random() * 90000 + 10000) });
-  const [showInvoice, setShowInvoice] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  
-  const gstAmt = (parseFloat(bill.amount || 0) * (parseFloat(bill.rate) / 100)).toFixed(2);
-  const total = (parseFloat(bill.amount || 0) + parseFloat(gstAmt)).toFixed(2);
-
-  const handleDownload = async () => {
-    if (!window.html2pdf) return;
-    setIsExporting(true);
-    const element = document.getElementById('printable-bill');
-    await window.html2pdf().set({ margin: 10, filename: `Inv_${bill.invNo}.pdf`, html2canvas: { scale: 2 } }).from(element).save();
-    setIsExporting(false);
-  };
-
-  const RequestList = ({ items, title, type }) => (
-    <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden mb-8">
-      <div className="bg-slate-50 p-4 border-b font-bold">{title}</div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-400">
-            <tr><th className="p-4">Client</th><th className="p-4">Details</th><th className="p-4">Actions</th></tr>
-          </thead>
-          <tbody>
-            {items.map(i => (
-              <tr key={i.id} className="border-t">
-                <td className="p-4"><b>{i.name}</b><br/>{i.phone}</td>
-                <td className="p-4">{i.details}</td>
-                <td className="p-4 flex gap-2">
-                  <button onClick={() => onUpdate(i.id, 'approved', type)} className="text-green-600"><CheckCircle size={18}/></button>
-                  <button onClick={() => onDelete(i.id, type)} className="text-red-500"><Trash2 size={18}/></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="grid lg:grid-cols-4 gap-8">
-      {showInvoice && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl p-8" id="printable-bill">
-            <h1 className="text-2xl font-black mb-4">INVOICE</h1>
-            <div className="mb-6">
-               <p className="text-sm">Client: <b>{bill.client}</b></p>
-               <p className="text-sm">Invoice: {bill.invNo}</p>
-            </div>
-            <div className="border-y py-4 mb-4">
-               <div className="flex justify-between"><span>Base Amount</span><span>₹{bill.amount}</span></div>
-               <div className="flex justify-between text-slate-400"><span>GST ({bill.rate}%)</span><span>₹{gstAmt}</span></div>
-            </div>
-            <div className="flex justify-between font-bold text-xl"><span>Total</span><span>₹{total}</span></div>
-            <div className="mt-8 flex gap-4">
-               <button onClick={handleDownload} className="flex-1 bg-blue-600 text-white py-2 rounded-xl">{isExporting ? '...' : 'Download'}</button>
-               <button onClick={() => setShowInvoice(false)} className="flex-1 bg-slate-100 py-2 rounded-xl">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="lg:col-span-3">
-        <RequestList items={materials} title="Raw Materials" type="material" />
-        <RequestList items={orders} title="Quotations" type="quote" />
-      </div>
-
-      <div className="lg:col-span-1 space-y-6">
-        <div className="bg-slate-900 text-white p-6 rounded-3xl">
-          <h3 className="font-bold mb-4 flex items-center gap-2"><Calculator size={20}/> GST Billing</h3>
-          <input className="w-full bg-white/10 p-3 rounded-xl mb-3" placeholder="Client Name" onChange={e => setBill({...bill, client: e.target.value})} />
-          <input className="w-full bg-white/10 p-3 rounded-xl mb-3" type="number" placeholder="Amount" onChange={e => setBill({...bill, amount: e.target.value})} />
-          <select className="w-full bg-white/10 p-3 rounded-xl mb-4 text-slate-400" onChange={e => setBill({...bill, rate: e.target.value})}>
-            <option value="18">18% Standard</option>
-            <option value="28">28% Heavy</option>
-            <option value="12">12% Parts</option>
-          </select>
-          <button onClick={() => setShowInvoice(true)} className="w-full bg-blue-600 py-3 rounded-xl font-bold">Generate Invoice</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
