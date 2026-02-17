@@ -1,414 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PriyaElectrical - Industrial Electrical Solutions</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Priya Electrical — Demo</title>
+    <!-- Tailwind via CDN for quick styling when you don't run a build -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        @media print {
-            body * { visibility: hidden; }
-            #printable-bill, #printable-bill * { visibility: visible; }
-            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
-            .no-print { display: none !important; }
-        }
+      /* Small utilities to mimic a few design touches */
+      .rounded-3xl{border-radius:1.5rem}
+      .rounded-2xl{border-radius:1rem}
     </style>
-</head>
-<body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { Zap, Phone, Mail, Trash2, Clock, CheckCircle, Calculator, Factory, ChevronRight, Cpu, ShieldCheck, Wind, Lightbulb, Truck, Printer, X, Download } = lucide;
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans">
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+      <div class="flex items-center gap-2">
+        <div class="bg-blue-600 p-2 rounded-lg text-white">⚡</div>
+        <h1 class="text-xl font-extrabold">Priya<span class="text-blue-600">Electrical</span></h1>
+      </div>
+      <div class="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
+        <a href="#home" class="hover:text-blue-600">Home</a>
+        <a href="#about" class="hover:text-blue-600">About</a>
+        <a href="#quote" class="hover:text-blue-600">Get Quote</a>
+        <a href="#material" class="hover:text-blue-600">Raw Materials</a>
+        <a href="#track" class="hover:text-blue-600">Track</a>
+      </div>
+      <button class="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold">Admin Login</button>
+    </nav>
 
-        // Mock Firebase service (replace with real Firebase if deploying)
-        const mockOrders = [];
-        const mockMaterials = [];
-
-        function App() {
-            const [user, setUser] = useState({ uid: 'demo-user' });
-            const [view, setView] = useState('home');
-            const [orders, setOrders] = useState(mockOrders);
-            const [materials, setMaterials] = useState(mockMaterials);
-            const [isAdmin, setIsAdmin] = useState(false);
-
-            const handleSubmit = async (data, type) => {
-                const newItem = {
-                    id: Date.now(),
-                    ...data,
-                    userId: user.uid,
-                    status: 'pending',
-                    timestamp: new Date().toISOString()
-                };
-                if (type === 'material') {
-                    setMaterials([...materials, newItem]);
-                } else {
-                    setOrders([...orders, newItem]);
-                }
-                setView('track');
-                alert('Request submitted successfully!');
-            };
-
-            const updateStatus = (id, status, type) => {
-                if (type === 'material') {
-                    setMaterials(materials.map(m => m.id === id ? { ...m, status } : m));
-                } else {
-                    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
-                }
-            };
-
-            const handleDelete = (id, type) => {
-                if (type === 'material') {
-                    setMaterials(materials.filter(m => m.id !== id));
-                } else {
-                    setOrders(orders.filter(o => o.id !== id));
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-                    <nav className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-          <div className="bg-blue-600 p-1.5 rounded-lg shadow-blue-200 shadow-lg">
-            <Zap className="text-white w-5 h-5" />
+    <main class="max-w-7xl mx-auto p-8">
+      <section id="home" class="relative rounded-3xl overflow-hidden shadow-2xl mb-12">
+        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" class="w-full h-72 object-cover" alt="banner" />
+        <div class="p-8 -mt-24 max-w-3xl bg-gradient-to-t from-slate-900/70 to-transparent text-white rounded-2xl">
+          <h2 class="text-4xl font-extrabold">Pioneering Modern <span class="text-blue-400">Power</span> Grids</h2>
+          <p class="mt-4 text-slate-200">Premium industrial electrical vendor specializing in large-scale infrastructure and raw material procurement.</p>
+          <div class="mt-6 flex gap-4">
+            <a href="#quote" class="bg-blue-600 text-white px-6 py-3 rounded-2xl">Get A Free Quote</a>
+            <a href="#about" class="bg-white/10 text-white px-6 py-3 rounded-2xl">Company Profile</a>
           </div>
-          <h1 className="text-xl font-extrabold tracking-tight text-slate-800">
-            Priya<span className="text-blue-600">Electrical</span>
-          </h1>
         </div>
-        
-        <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
-          <button onClick={() => setView('home')} className={`hover:text-blue-600 transition-colors ${view === 'home' ? 'text-blue-600' : ''}`}>Home</button>
-          <button onClick={() => setView('about')} className={`hover:text-blue-600 transition-colors ${view === 'about' ? 'text-blue-600' : ''}`}>About</button>
-          <button onClick={() => setView('quote')} className={`hover:text-blue-600 transition-colors ${view === 'quote' ? 'text-blue-600' : ''}`}>Get Quote</button>
-          <button onClick={() => setView('material')} className={`hover:text-blue-600 transition-colors ${view === 'material' ? 'text-blue-600' : ''}`}>Raw Materials</button>
-          <button onClick={() => setView('track')} className={`hover:text-blue-600 transition-colors ${view === 'track' ? 'text-blue-600' : ''}`}>Track</button>
+      </section>
+
+      <section id="about" class="mb-12">
+        <h3 class="text-2xl font-bold mb-3">Industrial Expertise</h3>
+        <p class="text-slate-600 mb-6">We provide specialized services across the electrical spectrum, from raw material sourcing to smart grid implementation.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="bg-white p-6 rounded-2xl shadow-sm"> <h4 class="font-bold">HT/LT Cables</h4><p class="text-sm text-slate-500">High-tension industrial wiring.</p></div>
+          <div class="bg-white p-6 rounded-2xl shadow-sm"> <h4 class="font-bold">Solar Systems</h4><p class="text-sm text-slate-500">End-to-end solar EPC solutions.</p></div>
+          <div class="bg-white p-6 rounded-2xl shadow-sm"> <h4 class="font-bold">Raw Materials</h4><p class="text-sm text-slate-500">Bulk supply of copper & insulators.</p></div>
         </div>
+      </section>
 
-        <button 
-          onClick={() => setIsAdmin(!isAdmin)} 
-          className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md"
-        >
-          {isAdmin ? 'Exit Panel' : 'Admin Login'}
-        </button>
-      </nav>
-
-      <main className="max-w-7xl mx-auto p-4 md:p-8">
-        {isAdmin ? (
-          <AdminPanel orders={orders} materials={materials} onUpdate={updateStatus} onDelete={handleDelete} />
-        ) : (
-          <>
-            {view === 'home' && <Home setView={setView} />}
-            {view === 'about' && <About />}
-            {view === 'quote' && <RequestForm type="quote" onSubmit={handleSubmit} />}
-            {view === 'material' && <RequestForm type="material" onSubmit={handleSubmit} />}
-            {view === 'track' && <Tracking orders={orders} materials={materials} />}
-          </>
-        )}
-      </main>
+      <section id="contact" class="grid md:grid-cols-2 gap-8">
+        <div class="bg-white p-8 rounded-2xl shadow-xl">
+          <h3 class="text-xl font-bold mb-4">Contact</h3>
+          <p class="text-slate-600">Phone: 8147267247<br/>Email: Raju@#324@gmail.com</p>
         </div>
-      );
-    }
-  }
+        <div class="bg-white p-8 rounded-2xl shadow-xl">
+          <h3 class="text-xl font-bold mb-4">Quick Quote</h3>
+          <p class="text-slate-600">To receive a quote, visit the deployed app and use the form (when site is built). This static page is a quick styled preview.</p>
+        </div>
+      </section>
+    </main>
 
-  const style = document.createElement('style');
-  style.innerHTML = `
-    @media print {
-      body * { visibility: hidden; }
-      #printable-bill, #printable-bill * { visibility: visible; }
-      #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
-      .no-print { display: none !important; }
-    }
-  `;
-  document.head.appendChild(style);
-        
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
+    <footer class="text-center py-6 text-sm text-slate-500">© PriyaElectrical</footer>
+  </body>
 </html>
-  const expertises = [
-    { 
-      name: "HT/LT Cables", 
-      desc: "Specialized high-tension industrial wiring for power grids.",
-      img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800",
-      icon: <Zap size={20} />,
-      link: 'quote'
-    },
-    { 
-      name: "Solar Systems", 
-      desc: "End-to-end solar EPC solutions and infrastructure components.",
-      img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800",
-      icon: <Wind size={20} />,
-      link: 'quote'
-    },
-    { 
-      name: "Industrial Raw Materials", 
-      desc: "Bulk supply of copper, aluminum, and electrical insulators.",
-      img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800",
-      icon: <Factory size={20} />,
-      link: 'material'
-    },
-    { 
-      name: "Smart Automation", 
-      desc: "PLC systems and intelligent switchgear for factories.",
-      img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800",
-      icon: <Cpu size={20} />,
-      link: 'quote'
-    },
-    { 
-      name: "Safety Infrastructure", 
-      desc: "Circuit breakers and earthing materials for large plants.",
-      img: "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=800",
-      icon: <ShieldCheck size={20} />,
-      link: 'quote'
-    },
-    { 
-      name: "Logistics Support", 
-      desc: "Fast-tracked delivery for critical electrical components.",
-      img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800",
-      icon: <Truck size={20} />,
-      link: 'material'
-    }
-  ];
-
-  return (
-    <div className="space-y-16 animate-in fade-in duration-700">
-      <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl">
-        <img 
-          src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" 
-          className="absolute inset-0 w-full h-full object-cover scale-105" 
-          alt="Main Banner" 
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
-          <div className="max-w-3xl">
-            <span className="bg-blue-600/20 text-blue-400 px-4 py-1.5 rounded-full font-bold text-xs tracking-widest uppercase border border-blue-500/30 mb-6 inline-block">Professional Solutions</span>
-            <h2 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-[1.1]">
-              Pioneering Modern <span className="text-blue-500">Power</span> Grids.
-            </h2>
-            <p className="text-slate-200 text-xl max-w-xl mb-10 font-medium leading-relaxed">
-              Premium industrial electrical vendor specializing in large-scale infrastructure and high-quality raw material procurement.
-            </p>
-            <div className="flex flex-wrap gap-5">
-              <button onClick={() => setView('quote')} className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/40 flex items-center gap-2">Get A Free Quote <ChevronRight size={18}/></button>
-              <button onClick={() => setView('about')} className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-2xl font-bold hover:bg-white/20 transition-all">Our Company Profile</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-10">
-        <div className="text-center mb-16 space-y-3">
-          <h3 className="text-3xl md:text-4xl font-black text-slate-800">Industrial Expertise</h3>
-          <p className="text-slate-500 max-w-2xl mx-auto">We provide specialized services across the entire electrical spectrum, from heavy-duty raw material sourcing to smart grid implementation.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {expertises.map((i, idx) => (
-            <div key={idx} className="group bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full hover:-translate-y-2">
-              <div className="relative h-60 overflow-hidden">
-                <img src={i.img} alt={i.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-3 rounded-2xl text-blue-600 shadow-lg">
-                  {i.icon}
-                </div>
-              </div>
-              <div className="p-8 flex flex-col flex-grow">
-                <h3 className="text-2xl font-bold mb-3 text-slate-800 group-hover:text-blue-600 transition-colors">{i.name}</h3>
-                <p className="text-slate-500 text-sm mb-8 leading-relaxed flex-grow">{i.desc}</p>
-                <button 
-                  onClick={() => setView(i.link)} 
-                  className="flex items-center gap-2 text-blue-600 font-extrabold text-sm group/btn"
-                >
-                  Learn More <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function About() {
-  return (
-    <div className="max-w-5xl mx-auto space-y-12 py-8 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center space-y-4">
-        <h2 className="text-4xl font-extrabold text-slate-900">About PriyaElectrical</h2>
-        <div className="h-1.5 w-24 bg-blue-600 mx-auto rounded-full"></div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-12 items-center">
-        <div className="space-y-6">
-          <div className="bg-blue-50 border-l-4 border-blue-600 p-6 rounded-r-xl">
-            <h3 className="font-bold text-blue-900 mb-2">Corporate Profile</h3>
-            <p className="text-blue-800/80 leading-relaxed text-sm">
-              We are a verified industrial electrical vendor specializing in high-tension infrastructure. 
-              Known for reliability and certified safety standards.
-            </p>
-          </div>
-          <p className="text-slate-600 leading-relaxed">
-            PriyaElectrical has consistently delivered end-to-end solutions for manufacturing plants, solar farms, 
-            and commercial grids. We bridge the gap between complex engineering needs and reliable component supply.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
-              <span className="block text-2xl font-extrabold text-blue-600">500+</span>
-              <span className="text-xs font-bold text-slate-500 uppercase">Projects</span>
-            </div>
-            <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
-              <span className="block text-2xl font-extrabold text-blue-600">100%</span>
-              <span className="text-xs font-bold text-slate-500 uppercase">Reliability</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-          <h3 className="text-xl font-bold mb-6 text-slate-800">Official Contact Information</h3>
-          <div className="space-y-6">
-            <a href="tel:8147267247" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
-              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Phone size={20}/></div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Phone Number</p>
-                <p className="font-bold text-slate-700 group-hover:text-blue-600">8147267247</p>
-              </div>
-            </a>
-            <a href="mailto:Raju.324@gmail.com" className="flex items-start gap-4 group hover:bg-slate-50 p-2 -m-2 rounded-2xl transition-all">
-              <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><Mail size={20}/></div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Email Support</p>
-                <p className="font-bold text-slate-700 group-hover:text-blue-600">Raju.324@gmail.com</p>
-              </div>
-            </a>
-            <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-              <span className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                <CheckCircle size={14}/> Verified Vendor
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono uppercase">Mon - Sat Service</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RequestForm({ type, onSubmit }) {
-  const [form, setForm] = useState({ name: '', phone: '', company: '', item: 'Standard Quote', details: '' });
-  
-  const isMaterial = type === 'material';
-
-  return (
-    <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 animate-in zoom-in duration-300">
-      <div className="flex items-center gap-5 mb-10">
-        <div className="bg-blue-600 p-5 rounded-3xl text-white shadow-lg shadow-blue-200">
-          {isMaterial ? <Factory size={32} /> : <Zap size={32} />}
-        </div>
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 leading-tight">
-            {isMaterial ? 'Material Sourcing' : 'Project Quotation'}
-          </h2>
-          <p className="text-slate-400 font-medium">Professional intake for industrial supply</p>
-        </div>
-      </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, type); }} className="space-y-8">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Representative Name</label>
-            <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
-              placeholder="e.g. John Doe" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-          </div>
-          
-          {isMaterial && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Company Name</label>
-              <input required className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
-                placeholder="e.g. Tesla Ind." value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Contact Phone</label>
-            <input required type="tel" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
-              placeholder="+91 00000 00000" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
-          </div>
-
-          {!isMaterial && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Required Asset</label>
-              <select className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium appearance-none" 
-                value={form.item} onChange={e => setForm({...form, item: e.target.value})}>
-                <option value="Solar Panels">Solar Panels</option>
-                <option value="High Voltage Cables">High Voltage Cables</option>
-                <option value="Industrial Switches">Industrial Switches</option>
-                <option value="Transformers">Transformers</option>
-              </select>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Specific Requirements</label>
-          <textarea rows="4" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" 
-            placeholder="Quantity, technical specs, or deadline details..." value={form.details} onChange={e => setForm({...form, details: e.target.value})}></textarea>
-        </div>
-
-        <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-600 hover:-translate-y-1 transition-all shadow-2xl shadow-slate-200 flex justify-center items-center gap-3">
-          Submit Official Request <ChevronRight size={20}/>
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function Tracking({ orders, materials }) {
-  const all = [
-    ...orders.map(o => ({...o, type: 'Quote Request', color: 'bg-blue-600'})), 
-    ...materials.map(m => ({...m, type: 'Material Sourcing', color: 'bg-indigo-600'}))
-  ].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Request Tracking</h2>
-        <span className="text-xs font-bold text-slate-400 uppercase">{all.length} Total Requests</span>
-      </div>
-
-      {all.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300 text-slate-400">
-          No requests found. Start a new quote to see history.
-        </div>
-      ) : (
-        all.map(item => (
-          <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-4 w-full">
-              <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.type}</span>
-                <h3 className="font-bold text-slate-800 text-lg">{item.item || 'General Request'}</h3>
-                <p className="text-xs text-slate-500">{item.company || 'Private Party'} • {new Date(item.timestamp).toLocaleDateString()}</p>
-              </div>
-            </div>
-            <div className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider ${
-              item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-            }`}>
-              {item.status}
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-function AdminPanel({ orders, materials, onUpdate, onDelete }) {
-  const [bill, setBill] = useState({ amount: '', rate: '18', client: '', invNo: 'INV-' + Math.floor(Math.random() * 90000 + 10000) });
-  const [showInvoice, setShowInvoice] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
   const gstAmt = (parseFloat(bill.amount || 0) * (parseFloat(bill.rate) / 100)).toFixed(2);
@@ -612,17 +269,22 @@ function AdminPanel({ orders, materials, onUpdate, onDelete }) {
             </div>
 
             <button onClick={() => setShowInvoice(true)} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-2xl shadow-blue-500/30 flex items-center justify-center gap-3 active:scale-95">
-                <Printer size={18}/> Generate Official Invoice
+              <Printer size={18}/> Generate Official Invoice
             </button>
-            </div>
+          </div>
         </div>
-        </div>
-        </div>
-            );
-        }
+      </div>
+    </div>
+  );
+}
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+const style = document.createElement('style');
+style.innerHTML = `
+  @media print {
+    body * { visibility: hidden; }
+    #printable-bill, #printable-bill * { visibility: visible; }
+    #printable-bill { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+    .no-print { display: none !important; }
+  }
+`;
+document.head.appendChild(style);
