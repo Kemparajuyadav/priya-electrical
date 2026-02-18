@@ -3,298 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PriyaElectrical | Industrial Solutions</title>
+    <title>PriyaElectrical | Industrial Power Systems</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; scroll-behavior: smooth; }
+        .hero-bg { background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200'); background-size: cover; background-position: center; }
+        .fade-in { animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .no-print { @media print { display: none; } }
     </style>
 </head>
 <body class="bg-[#f8fafc] text-slate-900">
 
-    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="showView('home')">
-            <div class="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-200">
-                <i data-lucide="zap" class="text-white w-5 h-5"></i>
+    <nav class="sticky top-0 z-[100] bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="showView('home')">
+            <div class="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-200">
+                <i data-lucide="zap" class="text-white w-6 h-6"></i>
             </div>
-            <h1 class="text-xl font-extrabold tracking-tight text-slate-800">
+            <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 italic">
                 Priya<span class="text-blue-600">Electrical</span>
             </h1>
         </div>
         
-        <div class="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
-            <button onclick="showView('home')" class="nav-link hover:text-blue-600 transition-colors">Home</button>
-            <button onclick="showView('about')" class="nav-link hover:text-blue-600 transition-colors">About</button>
-            <button onclick="showView('quote')" class="nav-link hover:text-blue-600 transition-colors">Get Quote</button>
-            <button onclick="showView('material')" class="nav-link hover:text-blue-600 transition-colors">Raw Materials</button>
-            <button onclick="showView('track')" class="nav-link hover:text-blue-600 transition-colors">Track</button>
+        <div class="hidden lg:flex gap-8 text-[11px] font-black text-slate-500 uppercase tracking-widest">
+            <button onclick="showView('home')" class="hover:text-blue-600">Home</button>
+            <button onclick="showView('about')" class="hover:text-blue-600">About HQ</button>
+            <button onclick="showView('quote')" class="hover:text-blue-600">Get Quote</button>
+            <button onclick="showView('material')" class="hover:text-blue-600">Raw Materials</button>
+            <button onclick="showView('track')" class="hover:text-blue-600">Track</button>
         </div>
 
-        <button onclick="toggleAdmin()" id="adminBtn" class="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md">
-            Admin Login
+        <button onclick="handleAdminEntry()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 transition-all">
+            Admin Portal
         </button>
     </nav>
 
-    <main id="app-content" class="max-w-7xl mx-auto p-4 md:p-8">
-        </main>
+    <main id="app-content"></main>
 
-    <div id="invoiceModal" class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <footer class="bg-slate-950 text-white pt-20 pb-10 px-6 mt-20">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 border-b border-slate-800 pb-16">
+            <div>
+                <h3 class="text-2xl font-black mb-6 italic text-blue-500 underline underline-offset-8">PriyaElectrical</h3>
+                <p class="text-slate-400 max-w-sm leading-relaxed mb-6 font-medium">Providing industrial-grade electrical solutions for heavy manufacturing and power infrastructure since 2012.</p>
+                <div class="space-y-2">
+                    <p class="text-sm font-bold text-white">Call: <a href="tel:8147267247" class="text-blue-400 hover:underline">+91 8147267247</a></p>
+                    <p class="text-sm font-bold text-white">Email: <a href="mailto:kempa2449@gmail.com" class="text-blue-400 hover:underline">kempa2449@gmail.com</a></p>
+                </div>
+            </div>
+            <div class="md:text-right">
+                <h4 class="font-bold mb-4 uppercase text-xs tracking-widest text-slate-500">Corporate Location</h4>
+                <p class="text-slate-300 font-bold">Electronic City, Phase 1<br>Bengaluru, Karnataka 560100</p>
+            </div>
         </div>
+    </footer>
+
+    <div id="modalOverlay" class="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-sm hidden flex items-center justify-center p-4"></div>
 
     <script>
-        // --- State Management (Replacing Firebase with LocalStorage) ---
-        let currentView = 'home';
-        let isAdmin = false;
-        let data = JSON.parse(localStorage.getItem('priya_data')) || { orders: [], materials: [] };
+        let db = JSON.parse(localStorage.getItem('priya_db_v3')) || { orders: [], materials: [] };
+        
+        // Updated reliable Industrial Images
+        const expertiseData = [
+            { id: 1, title: 'Industrial Solar', img: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&q=80&w=800', icon: 'sun' },
+            { id: 2, title: 'High Voltage Cables', img: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800', icon: 'zap' },
+            { id: 3, title: 'Pure Copper Sourcing', img: 'https://images.unsplash.com/photo-1558444455-57551955ef28?auto=format&fit=crop&q=80&w=800', icon: 'box' },
+            { id: 4, title: 'Industrial Sockets', img: 'https://images.unsplash.com/photo-1621905252507-b354bc2c1df5?auto=format&fit=crop&q=80&w=800', icon: 'plug' },
+            { id: 5, title: 'Power Transformers', img: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800', icon: 'activity' },
+            { id: 6, title: 'Smart Switchgear', img: 'https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?auto=format&fit=crop&q=80&w=800', icon: 'cpu' }
+        ];
 
-        function saveData() {
-            localStorage.setItem('priya_data', JSON.stringify(data));
-            if (isAdmin) renderAdmin();
-            else if (currentView === 'track') renderTrack();
-        }
-
-        // --- Navigation Logic ---
         function showView(view) {
-            currentView = view;
-            isAdmin = false;
-            document.getElementById('adminBtn').innerText = "Admin Login";
             const content = document.getElementById('app-content');
-            content.className = "max-w-7xl mx-auto p-4 md:p-8 fade-in";
-            
-            switch(view) {
-                case 'home': renderHome(); break;
-                case 'about': renderAbout(); break;
-                case 'quote': renderForm('quote'); break;
-                case 'material': renderForm('material'); break;
-                case 'track': renderTrack(); break;
-            }
+            content.className = "fade-in min-h-screen";
+            window.scrollTo(0,0);
+            if(view === 'home') renderHome();
+            if(view === 'about') renderAbout();
+            if(view === 'quote') renderForm('quote');
+            if(view === 'material') renderForm('material');
+            if(view === 'track') renderTrack();
+            if(view === 'admin') renderAdmin();
             lucide.createIcons();
         }
 
-        function toggleAdmin() {
-            isAdmin = !isAdmin;
-            const btn = document.getElementById('adminBtn');
-            if (isAdmin) {
-                btn.innerText = "Exit Panel";
-                renderAdmin();
-            } else {
-                showView('home');
-            }
-            lucide.createIcons();
-        }
-
-        // --- View Renderers ---
         function renderHome() {
-            const container = document.getElementById('app-content');
-            container.innerHTML = `
-                <section class="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl mb-16">
-                    <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" class="absolute inset-0 w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
-                        <h2 class="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-[1.1]">Pioneering Modern <span class="text-blue-500">Power</span> Grids.</h2>
-                        <div class="flex flex-wrap gap-5">
-                            <button onclick="showView('quote')" class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-500/40">Get A Free Quote</button>
+            document.getElementById('app-content').innerHTML = `
+                <section class="hero-bg text-white px-6 py-32 text-center">
+                    <div class="max-w-4xl mx-auto">
+                        <h1 class="text-5xl md:text-7xl font-black mb-8">Industrial Power <span class="text-blue-500">Excellence</span>.</h1>
+                        <div class="max-w-xl mx-auto relative mb-12">
+                            <input type="text" id="mainSearch" onkeyup="handleSearch(this.value)" placeholder="Search Industrial Products..." class="w-full bg-white text-slate-900 p-6 rounded-2xl shadow-2xl outline-none font-bold">
                         </div>
                     </div>
                 </section>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-10" id="expertise-grid"></div>
+                <section class="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-3 gap-8" id="product-grid">
+                    ${expertiseData.map(item => renderProductCard(item)).join('')}
+                </section>
             `;
-            
-            const expertises = [
-                { name: "HT/LT Cables", icon: "zap", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800" },
-                { name: "Solar Systems", icon: "sun", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800" },
-                { name: "Raw Materials", icon: "factory", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800" }
-            ];
+        }
 
-            const grid = document.getElementById('expertise-grid');
-            expertises.forEach(ex => {
-                grid.innerHTML += `
-                    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:-translate-y-2 transition-all duration-300">
-                        <img src="${ex.img}" class="h-48 w-full object-cover">
-                        <div class="p-6">
-                            <h3 class="text-xl font-bold mb-2">${ex.name}</h3>
-                            <button onclick="showView('quote')" class="text-blue-600 font-bold text-sm">Learn More →</button>
-                        </div>
+        function renderProductCard(item) {
+            return `
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 group">
+                    <div class="h-60 overflow-hidden"><img src="${item.img}" class="w-full h-full object-cover transition-transform group-hover:scale-110"></div>
+                    <div class="p-8">
+                        <div class="bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 mb-4"><i data-lucide="${item.icon}"></i></div>
+                        <h3 class="text-xl font-bold mb-4">${item.title}</h3>
+                        <button onclick="showView('quote')" class="text-blue-600 font-bold text-sm">Request Sourcing →</button>
                     </div>
-                `;
-            });
+                </div>
+            `;
+        }
+
+        function handleSearch(val) {
+            const filtered = expertiseData.filter(item => item.title.toLowerCase().includes(val.toLowerCase()));
+            document.getElementById('product-grid').innerHTML = filtered.map(item => renderProductCard(item)).join('');
+            lucide.createIcons();
         }
 
         function renderAbout() {
             document.getElementById('app-content').innerHTML = `
-                <div class="max-w-3xl mx-auto py-10 text-center">
-                    <h2 class="text-4xl font-black mb-4">About PriyaElectrical</h2>
-                    <p class="text-slate-600 leading-relaxed mb-8">We are a verified industrial electrical vendor specializing in high-tension infrastructure and smart grid solutions.</p>
-                    <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 text-left">
-                        <div class="flex items-center gap-4 mb-4"><i data-lucide="phone" class="text-blue-600"></i> <span>8147267247</span></div>
-                        <div class="flex items-center gap-4"><i data-lucide="mail" class="text-blue-600"></i> <span>Raju@#324@gmail.com</span></div>
+                <section class="max-w-6xl mx-auto px-6 py-20">
+                    <div class="grid lg:grid-cols-2 gap-12 items-center mb-20">
+                        <div>
+                            <h2 class="text-4xl font-black mb-6 italic">Corporate Profile</h2>
+                            <p class="text-slate-600 mb-8 font-medium leading-relaxed italic">Established as a key vendor in 2012, PriyaElectrical manages massive turn-key electrical projects with an annual turnover exceeding <strong>₹50 Crores</strong>.</p>
+                            <div class="space-y-4 mb-8">
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                    <p class="text-xs font-black text-slate-400 uppercase">Call Support</p>
+                                    <a href="tel:8147267247" class="text-xl font-black text-slate-900 hover:text-blue-600 italic">Call: +91 8147267247</a>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                    <p class="text-xs font-black text-slate-400 uppercase">Official Inquiry</p>
+                                    <a href="mailto:kempa2449@gmail.com" class="text-xl font-black text-slate-900 hover:text-blue-600 italic">Email: kempa2449@gmail.com</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 p-8 rounded-[3rem] text-white">
+                            <h4 class="font-bold mb-6 italic text-blue-400">Inventory Material List</h4>
+                            <ul class="space-y-3 text-sm font-bold uppercase tracking-wider text-slate-400">
+                                <li>• High-Tension Copper Rods</li>
+                                <li>• Heavy Duty Armoured Cables</li>
+                                <li>• Industrial Porcelain Insulators</li>
+                                <li>• Silicon Semi-conductors</li>
+                                <li>• Smart Power Grid Switches</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="rounded-[3rem] overflow-hidden h-96 shadow-2xl">
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15559.813088916388!2d77.653457!3d12.839847!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae6c8810e76743%3A0x139463cf60b8109!2sElectronic%20City%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1700000000000" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderForm(type) {
+            const isQ = type === 'quote';
+            document.getElementById('app-content').innerHTML = `
+                <div class="max-w-2xl mx-auto px-6 py-20">
+                    <div class="bg-white p-12 rounded-[3rem] shadow-2xl border border-slate-100">
+                        <h2 class="text-3xl font-black mb-10 text-center italic">${isQ ? 'Project Quote' : 'Material Sourcing'}</h2>
+                        <form onsubmit="handleForm(event, '${type}')" class="space-y-6">
+                            <input id="f-name" placeholder="Full Name / Company" required class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-bold">
+                            <input id="f-phone" placeholder="Phone Number" required class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-bold">
+                            ${isQ ? `
+                                <select id="f-item" class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold">
+                                    <option>Solar Panel Installation</option>
+                                    <option>Industrial Cables</option>
+                                    <option>Switchgear Maintenance</option>
+                                </select>` : 
+                                `<input id="f-item" placeholder="Type of Material Needed" required class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold">`
+                            }
+                            <textarea id="f-details" placeholder="Message/Requirements..." class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl h-32"></textarea>
+                            <button class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-900">Submit Official Request</button>
+                        </form>
                     </div>
                 </div>
             `;
         }
 
-        function renderForm(type) {
-            const isMaterial = type === 'material';
-            document.getElementById('app-content').innerHTML = `
-                <div class="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
-                    <h2 class="text-3xl font-black mb-6">${isMaterial ? 'Material Sourcing' : 'Project Quotation'}</h2>
-                    <form onsubmit="handleFormSubmit(event, '${type}')" class="space-y-6">
-                        <input id="f-name" placeholder="Name" required class="w-full p-4 bg-slate-50 border rounded-2xl">
-                        <input id="f-phone" placeholder="Phone" required class="w-full p-4 bg-slate-50 border rounded-2xl">
-                        <input id="f-item" placeholder="Required Item" required class="w-full p-4 bg-slate-50 border rounded-2xl">
-                        <textarea id="f-details" placeholder="Specific Requirements" class="w-full p-4 bg-slate-50 border rounded-2xl"></textarea>
-                        <button class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all">Submit Request</button>
-                    </form>
-                </div>
-            `;
-        }
-
-        function handleFormSubmit(e, type) {
+        function handleForm(e, type) {
             e.preventDefault();
-            const newItem = {
-                id: Date.now(),
+            const item = {
+                id: 'REF-' + Math.floor(1000 + Math.random() * 9000),
                 name: document.getElementById('f-name').value,
                 phone: document.getElementById('f-phone').value,
                 item: document.getElementById('f-item').value,
                 details: document.getElementById('f-details').value,
                 status: 'pending',
+                type: type,
                 timestamp: new Date().toISOString()
             };
-            if (type === 'quote') data.orders.push(newItem);
-            else data.materials.push(newItem);
-            saveData();
+            if(type === 'quote') db.orders.push(item); else db.materials.push(item);
+            localStorage.setItem('priya_db_v3', JSON.stringify(db));
             showView('track');
         }
 
         function renderTrack() {
-            const all = [...data.orders, ...data.materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-            let html = `<h2 class="text-2xl font-bold mb-6">Request Tracking</h2><div class="space-y-4">`;
-            
-            if (all.length === 0) html += `<p class="text-slate-400">No requests found.</p>`;
-            
-            all.forEach(item => {
-                html += `
-                    <div class="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                        <div>
-                            <h3 class="font-bold text-slate-800">${item.item}</h3>
-                            <p class="text-xs text-slate-500">${new Date(item.timestamp).toLocaleDateString()}</p>
-                        </div>
-                        <span class="px-4 py-1 rounded-full text-[10px] font-black uppercase ${item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${item.status}</span>
+            const all = [...db.orders, ...db.materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            document.getElementById('app-content').innerHTML = `
+                <div class="max-w-3xl mx-auto px-6 py-20 text-center">
+                    <h2 class="text-4xl font-black mb-12 italic">Track <span class="text-blue-600 underline">Status</span></h2>
+                    <div class="space-y-4">
+                        ${all.map(item => `
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm">
+                                <div class="text-left"><p class="text-[9px] font-black text-slate-400 uppercase">#${item.id}</p><h4 class="font-black text-slate-800 italic">${item.item}</h4></div>
+                                <span class="px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${item.status === 'pending' ? 'bg-amber-100 text-amber-600' : item.status === 'accept' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}">${item.status}</span>
+                            </div>
+                        `).join('')}
                     </div>
-                `;
-            });
-            html += `</div>`;
-            document.getElementById('app-content').innerHTML = html;
+                </div>
+            `;
         }
 
-        // --- Admin Panel Logic ---
+        function handleAdminEntry() {
+            if(prompt("Admin Key:") === "1234") showView('admin');
+            else alert("Denied");
+        }
+
         function renderAdmin() {
             document.getElementById('app-content').innerHTML = `
-                <div class="grid lg:grid-cols-4 gap-8">
-                    <div class="lg:col-span-3 space-y-8">
-                        <div id="material-list"></div>
-                        <div id="quote-list"></div>
-                    </div>
-                    <div class="lg:col-span-1">
-                        <div class="bg-slate-900 text-white p-8 rounded-[2rem] shadow-xl">
-                            <h3 class="font-black text-xl mb-6">GST Billing</h3>
-                            <input id="b-client" placeholder="Client Name" class="w-full bg-white/10 p-4 rounded-xl mb-4 outline-none border border-white/10">
-                            <input id="b-amt" type="number" placeholder="Base Amount" class="w-full bg-white/10 p-4 rounded-xl mb-4 outline-none border border-white/10">
-                            <select id="b-rate" class="w-full bg-white/10 p-4 rounded-xl mb-6 outline-none border border-white/10">
-                                <option value="18" class="text-black">18% Standard</option>
-                                <option value="12" class="text-black">12% Equipment</option>
+                <div class="max-w-7xl mx-auto px-6 py-12">
+                    <h2 class="text-3xl font-black mb-10 italic">Management Portal</h2>
+                    <div class="grid lg:grid-cols-4 gap-10">
+                        <div class="lg:col-span-3 space-y-10">
+                            ${renderAdminList('Material Sourcing Requests', db.materials, 'material')}
+                            ${renderAdminList('Project Quotations', db.orders, 'quote')}
+                        </div>
+                        <div class="lg:col-span-1 bg-slate-900 text-white p-8 rounded-[3rem] sticky top-28 h-fit shadow-2xl">
+                            <h3 class="font-black mb-6 italic text-blue-400">Invoice Engine</h3>
+                            <input id="inv-client" placeholder="Client Name" class="w-full bg-white/10 p-4 rounded-xl mb-4 border border-white/10 outline-none text-white font-bold">
+                            <input id="inv-amt" type="number" placeholder="Base Amount" class="w-full bg-white/10 p-4 rounded-xl mb-4 border border-white/10 outline-none text-white font-bold">
+                            <p class="text-[10px] font-black text-slate-400 uppercase mb-2 px-2">Select GST %</p>
+                            <select id="inv-gst" class="w-full bg-white/10 p-4 rounded-xl mb-6 border border-white/10 outline-none font-bold text-white">
+                                <option value="5" class="text-black">5% (Essential)</option>
+                                <option value="10" class="text-black">10% (Export)</option>
+                                <option value="12" class="text-black">12% (Equipment)</option>
+                                <option value="15" class="text-black">15% (Service)</option>
+                                <option value="18" class="text-black" selected>18% (Standard)</option>
+                                <option value="20" class="text-black">20% (Premium)</option>
                             </select>
-                            <button onclick="previewInvoice()" class="w-full bg-blue-600 py-4 rounded-xl font-bold uppercase text-xs tracking-widest">Preview Invoice</button>
+                            <button onclick="generateInvoice()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-white hover:text-blue-600">Generate PDF</button>
                         </div>
                     </div>
                 </div>
             `;
-            renderTable('material-list', data.materials, 'Raw Materials', 'material');
-            renderTable('quote-list', data.orders, 'Quotations', 'quote');
             lucide.createIcons();
         }
 
-        function renderTable(containerId, items, title, type) {
-            let html = `
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="bg-slate-50 p-6 border-b font-black text-sm uppercase tracking-widest">${title} (${items.length})</div>
-                    <table class="w-full text-left text-sm">
-                        <tbody class="divide-y">
+        function renderAdminList(title, items, type) {
+            return `
+                <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="p-6 border-b font-black text-xs uppercase tracking-widest text-slate-400 bg-slate-50">${title}</div>
+                    <table class="w-full text-left">
+                        <tbody class="divide-y divide-slate-100">
+                            ${items.map(item => `
+                                <tr>
+                                    <td class="p-6"><div class="font-black italic text-slate-800">${item.name}</div><div class="text-xs font-bold text-slate-400">${item.item}</div></td>
+                                    <td class="p-6 text-right space-x-2">
+                                        <button onclick="updateStat('${item.id}', 'pending', '${type}')" class="p-2 bg-amber-50 text-amber-600 rounded-lg hover:scale-110 transition-transform"><i data-lucide="clock" class="w-4 h-4"></i></button>
+                                        <button onclick="updateStat('${item.id}', 'accept', '${type}')" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:scale-110 transition-transform"><i data-lucide="check" class="w-4 h-4"></i></button>
+                                        <button onclick="updateStat('${item.id}', 'complete', '${type}')" class="p-2 bg-green-50 text-green-600 rounded-lg hover:scale-110 transition-transform"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                                        <button onclick="deleteRow('${item.id}', '${type}')" class="p-2 bg-red-50 text-red-600 rounded-lg hover:scale-110 transition-transform"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
-            items.forEach(i => {
-                html += `
-                    <tr>
-                        <td class="p-6"><div class="font-bold">${i.name}</div><div class="text-xs text-slate-400">${i.phone}</div></td>
-                        <td class="p-6">${i.item}</td>
-                        <td class="p-6 text-right">
-                            <button onclick="updateStatus('${i.id}', 'approved', '${type}')" class="p-2 bg-green-50 text-green-600 rounded-lg mr-2"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
-                            <button onclick="deleteItem('${i.id}', '${type}')" class="p-2 bg-red-50 text-red-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-            html += `</tbody></table></div>`;
-            document.getElementById(containerId).innerHTML = html;
         }
 
-        function updateStatus(id, status, type) {
-            const list = type === 'quote' ? data.orders : data.materials;
-            const idx = list.findIndex(i => i.id == id);
-            list[idx].status = status;
-            saveData();
+        function updateStat(id, stat, type) {
+            const list = type === 'quote' ? db.orders : db.materials;
+            const target = list.find(i => i.id === id);
+            if(target) target.status = stat;
+            localStorage.setItem('priya_db_v3', JSON.stringify(db));
+            renderAdmin();
         }
 
-        function deleteItem(id, type) {
-            if (type === 'quote') data.orders = data.orders.filter(i => i.id != id);
-            else data.materials = data.materials.filter(i => i.id != id);
-            saveData();
+        function deleteRow(id, type) {
+            if(!confirm("Delete entry?")) return;
+            if(type === 'quote') db.orders = db.orders.filter(i => i.id !== id);
+            else db.materials = db.materials.filter(i => i.id !== id);
+            localStorage.setItem('priya_db_v3', JSON.stringify(db));
+            renderAdmin();
         }
 
-        function previewInvoice() {
-            const client = document.getElementById('b-client').value || 'Valued Client';
-            const amt = parseFloat(document.getElementById('b-amt').value || 0);
-            const rate = parseInt(document.getElementById('b-rate').value);
-            const gst = (amt * rate / 100).toFixed(2);
-            const total = (amt + parseFloat(gst)).toFixed(2);
-            const invNo = 'INV-' + Math.floor(Math.random()*90000);
-
-            const modal = document.getElementById('invoiceModal');
-            modal.innerHTML = `
-                <div class="bg-white w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl">
-                    <div class="p-10" id="printable-bill">
-                        <div class="flex justify-between mb-12">
-                            <div><h1 class="text-3xl font-black">INVOICE</h1><p class="text-slate-400 font-bold">${invNo}</p></div>
-                            <div class="text-right font-bold"><span class="text-blue-600">PriyaElectrical</span><br><small>8147267247</small></div>
+        function generateInvoice() {
+            const client = document.getElementById('inv-client').value || 'VALUED CLIENT';
+            const base = parseFloat(document.getElementById('inv-amt').value || 0);
+            const gstRate = parseInt(document.getElementById('inv-gst').value);
+            const gstAmt = (base * gstRate / 100).toFixed(2);
+            const total = (base + parseFloat(gstAmt)).toLocaleString();
+            
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('hidden');
+            overlay.innerHTML = `
+                <div class="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden">
+                    <div id="invoice-pdf" class="p-16">
+                        <div class="flex justify-between mb-16 items-start">
+                            <div><h1 class="text-3xl font-black italic mb-1 uppercase tracking-tighter">TAX INVOICE</h1><p class="text-[10px] font-black text-slate-400">#INV-${Date.now().toString().slice(-6)}</p></div>
+                            <div class="text-right italic font-black text-blue-600 text-2xl underline decoration-blue-200">PriyaElectrical</div>
                         </div>
-                        <div class="mb-10">
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Billed To</h4>
-                            <p class="font-black text-lg">${client}</p>
+                        <div class="grid grid-cols-2 gap-10 mb-16">
+                            <div><p class="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Billed To</p><p class="text-lg font-black italic uppercase">${client}</p></div>
+                            <div class="text-right"><p class="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Date</p><p class="font-black italic">${new Date().toLocaleDateString()}</p></div>
                         </div>
-                        <div class="border-t py-6 space-y-2">
-                            <div class="flex justify-between"><span>Base Amount</span><span>₹${amt.toLocaleString()}</span></div>
-                            <div class="flex justify-between text-slate-400 italic"><span>GST (${rate}%)</span><span>₹${gst}</span></div>
-                            <div class="flex justify-between text-2xl font-black border-t pt-4"><span>Total</span><span>₹${total}</span></div>
+                        <div class="border-y-4 border-slate-900 py-8 mb-10">
+                            <div class="flex justify-between font-black p-6 bg-slate-50 rounded-2xl italic"><span>Industrial Supply & Maintenance</span><span>₹${base.toLocaleString()}</span></div>
+                        </div>
+                        <div class="flex justify-end pt-4">
+                            <div class="w-64 space-y-3">
+                                <div class="flex justify-between text-slate-400 font-bold italic text-sm"><span>GST (${gstRate}%)</span><span>₹${gstAmt}</span></div>
+                                <div class="flex justify-between text-3xl font-black italic text-slate-900 border-t pt-4"><span>TOTAL</span><span>₹${total}</span></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="bg-slate-50 p-6 flex gap-4">
-                        <button onclick="downloadPDF('${invNo}')" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold">Download PDF</button>
-                        <button onclick="document.getElementById('invoiceModal').classList.add('hidden')" class="flex-1 bg-slate-200 py-4 rounded-xl font-bold">Close</button>
+                    <div class="bg-slate-50 p-8 flex gap-4">
+                        <button onclick="html2pdf().from(document.getElementById('invoice-pdf')).save('Invoice.pdf')" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest">Download PDF</button>
+                        <button onclick="document.getElementById('modalOverlay').classList.add('hidden')" class="flex-1 bg-slate-200 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest">Close</button>
                     </div>
                 </div>
             `;
-            modal.classList.remove('hidden');
         }
 
-        function downloadPDF(filename) {
-            const element = document.getElementById('printable-bill');
-            html2pdf().from(element).save(`${filename}.pdf`);
-        }
-
-        // Initialize
         showView('home');
     </script>
 </body>
