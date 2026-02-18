@@ -12,17 +12,12 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body>
+<body class="bg-slate-50 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { Zap, ShieldCheck, Factory, Phone, Mail, Clock } = lucide;
-
-        // Your Real Firebase Keys
+        // --- YOUR ACTUAL FIREBASE KEYS ---
         const firebaseConfig = {
             apiKey: "AIzaSyAL5_0rCBrWuJJhdxYphSbK-Pu5gcQZdWc",
             authDomain: "priyaelectrical-38d44.firebaseapp.com",
@@ -32,6 +27,7 @@
             appId: "1:562817664071:web:b3d9c0ed5f1880b4361d62"
         };
 
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -39,110 +35,50 @@
             const [view, setView] = React.useState('home');
 
             return (
-                <div className="min-h-screen bg-slate-50 font-sans">
-                    {/* Navigation */}
+                <div className="min-h-screen">
+                    {/* Professional Navigation */}
                     <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50">
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                            <div className="bg-blue-600 p-1 rounded-lg text-white"><Zap size={20}/></div>
-                            <h1 className="text-xl font-black italic text-slate-900">PRIYA<span className="text-blue-600">ELECTRICAL</span></h1>
+                            <div className="bg-blue-600 p-1 rounded-lg text-white font-bold px-2">⚡</div>
+                            <h1 className="text-xl font-black italic">PRIYA<span className="text-blue-600">ELECTRICAL</span></h1>
                         </div>
-                        <div className="flex gap-6 text-sm font-bold text-slate-600 uppercase tracking-tighter">
+                        <div className="flex gap-4 text-xs font-bold uppercase text-slate-600">
                             <button onClick={() => setView('home')} className="hover:text-blue-600">Home</button>
                             <button onClick={() => setView('quote')} className="hover:text-blue-600">Get Quote</button>
-                            <button onClick={() => setView('track')} className="hover:text-blue-600">Track Order</button>
+                            <button onClick={() => setView('track')} className="hover:text-blue-600">Track</button>
                         </div>
                     </nav>
 
-                    {/* Logic Routing */}
-                    {view === 'home' && <Hero setView={setView} />}
-                    {view === 'quote' && <QuoteForm setView={setView} />}
-                    {view === 'track' && <Tracker />}
-                </div>
-            );
-        }
-
-        function Hero({ setView }) {
-            return (
-                <div>
-                    {/* Banner Image with Logic */}
-                    <div className="relative h-[500px] flex items-center justify-center text-white overflow-hidden">
-                        <img 
-                            src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=2000" 
-                            className="absolute inset-0 w-full h-full object-cover brightness-50"
-                            alt="Industrial Power"
-                        />
-                        <div className="relative z-10 text-center px-4">
-                            <h2 className="text-6xl font-black mb-4 uppercase">Pioneering Power</h2>
-                            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">Certified Industrial Electrical Vendor for HT/LT Infrastructure & Engineering.</p>
-                            <button onClick={() => setView('quote')} className="bg-blue-600 hover:bg-blue-700 px-12 py-5 rounded-full text-lg font-black transition-all transform hover:scale-105 shadow-2xl">
-                                REQUEST QUOTATION
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function QuoteForm({ setView }) {
-            const [loading, setLoading] = React.useState(false);
-            const submit = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                const data = {
-                    client: e.target.name.value,
-                    phone: e.target.phone.value,
-                    req: e.target.req.value,
-                    status: 'Pending Review',
-                    date: new Date().toLocaleDateString()
-                };
-                await db.collection('orders').add(data);
-                setLoading(false);
-                alert("Request Sent!");
-                setView('track');
-            };
-
-            return (
-                <div className="max-w-xl mx-auto py-12 px-6">
-                    <form onSubmit={submit} className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100">
-                        <h3 className="text-3xl font-black mb-6">Service Request</h3>
-                        <input name="name" placeholder="Contact Name" required className="w-full p-4 mb-4 bg-slate-50 border rounded-xl" />
-                        <input name="phone" placeholder="Phone Number" required className="w-full p-4 mb-4 bg-slate-50 border rounded-xl" />
-                        <textarea name="req" placeholder="Project Details (HT/LT, Materials, etc.)" rows="4" className="w-full p-4 mb-6 bg-slate-50 border rounded-xl"></textarea>
-                        <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest">
-                            {loading ? "Sending..." : "Submit Quote"}
-                        </button>
-                    </form>
-                </div>
-            );
-        }
-
-        function Tracker() {
-            const [orders, setOrders] = React.useState([]);
-            React.useEffect(() => {
-                return db.collection('orders').onSnapshot(s => setOrders(s.docs.map(d => d.data())));
-            }, []);
-
-            return (
-                <div className="max-w-4xl mx-auto py-12 px-6">
-                    <h3 className="text-3xl font-black mb-8">Live Tracking</h3>
-                    <div className="grid gap-4">
-                        {orders.map((o, i) => (
-                            <div key={i} className="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm">
-                                <div>
-                                    <p className="font-black text-slate-800 uppercase">{o.client}</p>
-                                    <p className="text-sm text-slate-400">{o.date}</p>
-                                </div>
-                                <span className="bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider">{o.status}</span>
+                    {/* Content Routing */}
+                    {view === 'home' && (
+                        <div className="relative h-[450px] flex items-center justify-center text-white text-center">
+                            <img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=1500" 
+                                 className="absolute inset-0 w-full h-full object-cover brightness-50" />
+                            <div className="relative z-10 px-6">
+                                <h2 className="text-5xl font-black mb-4 uppercase italic">Pioneering Power</h2>
+                                <p className="text-lg mb-8 opacity-90">HT/LT Infrastructure & Engineering Raw Materials</p>
+                                <button onClick={() => setView('quote')} className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest transition-transform hover:scale-105">
+                                    Request Quotation
+                                </button>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
+                        </div>
+                    )}
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
-
+                    {view === 'quote' && (
+                        <div className="max-w-xl mx-auto py-12 px-6">
+                            <form className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100" 
+                                  onSubmit={async (e) => {
+                                      e.preventDefault();
+                                      const data = {
+                                          client: e.target.client.value,
+                                          phone: e.target.phone.value,
+                                          details: e.target.details.value,
+                                          date: new Date().toLocaleString(),
+                                          status: 'Pending'
+                                      };
+                                      await db.collection('orders').add(data);
+                                      alert("Request Sent Successfully!");
+                                      setView('track');
+                                  }}>
+                                <h3 className="text-2xl font-black mb-6 italic">Quotation Form</h3>
+                                <input name="client" placeholder="Company/Client Name" required className="w-full p-4 mb-4 bg-slate-50 border rounded-xl focus:ring-2
