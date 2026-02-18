@@ -3,82 +3,299 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Priya Electrical | Industrial Portal</title>
-    
+    <title>PriyaElectrical | Industrial Solutions</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .no-print { @media print { display: none; } }
+    </style>
 </head>
-<body class="bg-slate-50 font-sans">
-    <div id="root"></div>
+<body class="bg-[#f8fafc] text-slate-900">
 
-    <script type="text/babel">
-        // --- YOUR ACTUAL FIREBASE KEYS ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyAL5_0rCBrWuJJhdxYphSbK-Pu5gcQZdWc",
-            authDomain: "priyaelectrical-38d44.firebaseapp.com",
-            projectId: "priyaelectrical-38d44",
-            storageBucket: "priyaelectrical-38d44.firebasestorage.app",
-            messagingSenderId: "562817664071",
-            appId: "1:562817664071:web:b3d9c0ed5f1880b4361d62"
-        };
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="showView('home')">
+            <div class="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-200">
+                <i data-lucide="zap" class="text-white w-5 h-5"></i>
+            </div>
+            <h1 class="text-xl font-extrabold tracking-tight text-slate-800">
+                Priya<span class="text-blue-600">Electrical</span>
+            </h1>
+        </div>
+        
+        <div class="hidden md:flex gap-8 text-sm font-semibold text-slate-600">
+            <button onclick="showView('home')" class="nav-link hover:text-blue-600 transition-colors">Home</button>
+            <button onclick="showView('about')" class="nav-link hover:text-blue-600 transition-colors">About</button>
+            <button onclick="showView('quote')" class="nav-link hover:text-blue-600 transition-colors">Get Quote</button>
+            <button onclick="showView('material')" class="nav-link hover:text-blue-600 transition-colors">Raw Materials</button>
+            <button onclick="showView('track')" class="nav-link hover:text-blue-600 transition-colors">Track</button>
+        </div>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        <button onclick="toggleAdmin()" id="adminBtn" class="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-800 transition-all shadow-md">
+            Admin Login
+        </button>
+    </nav>
 
-        function App() {
-            const [view, setView] = React.useState('home');
+    <main id="app-content" class="max-w-7xl mx-auto p-4 md:p-8">
+        </main>
 
-            return (
-                <div className="min-h-screen">
-                    {/* Professional Navigation */}
-                    <nav className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-50">
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                            <div className="bg-blue-600 p-1 rounded-lg text-white font-bold px-2">⚡</div>
-                            <h1 className="text-xl font-black italic">PRIYA<span className="text-blue-600">ELECTRICAL</span></h1>
+    <div id="invoiceModal" class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        </div>
+
+    <script>
+        // --- State Management (Replacing Firebase with LocalStorage) ---
+        let currentView = 'home';
+        let isAdmin = false;
+        let data = JSON.parse(localStorage.getItem('priya_data')) || { orders: [], materials: [] };
+
+        function saveData() {
+            localStorage.setItem('priya_data', JSON.stringify(data));
+            if (isAdmin) renderAdmin();
+            else if (currentView === 'track') renderTrack();
+        }
+
+        // --- Navigation Logic ---
+        function showView(view) {
+            currentView = view;
+            isAdmin = false;
+            document.getElementById('adminBtn').innerText = "Admin Login";
+            const content = document.getElementById('app-content');
+            content.className = "max-w-7xl mx-auto p-4 md:p-8 fade-in";
+            
+            switch(view) {
+                case 'home': renderHome(); break;
+                case 'about': renderAbout(); break;
+                case 'quote': renderForm('quote'); break;
+                case 'material': renderForm('material'); break;
+                case 'track': renderTrack(); break;
+            }
+            lucide.createIcons();
+        }
+
+        function toggleAdmin() {
+            isAdmin = !isAdmin;
+            const btn = document.getElementById('adminBtn');
+            if (isAdmin) {
+                btn.innerText = "Exit Panel";
+                renderAdmin();
+            } else {
+                showView('home');
+            }
+            lucide.createIcons();
+        }
+
+        // --- View Renderers ---
+        function renderHome() {
+            const container = document.getElementById('app-content');
+            container.innerHTML = `
+                <section class="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl mb-16">
+                    <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=1200" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-8 md:p-20">
+                        <h2 class="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-[1.1]">Pioneering Modern <span class="text-blue-500">Power</span> Grids.</h2>
+                        <div class="flex flex-wrap gap-5">
+                            <button onclick="showView('quote')" class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-500/40">Get A Free Quote</button>
                         </div>
-                        <div className="flex gap-4 text-xs font-bold uppercase text-slate-600">
-                            <button onClick={() => setView('home')} className="hover:text-blue-600">Home</button>
-                            <button onClick={() => setView('quote')} className="hover:text-blue-600">Get Quote</button>
-                            <button onClick={() => setView('track')} className="hover:text-blue-600">Track</button>
-                        </div>
-                    </nav>
+                    </div>
+                </section>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-10" id="expertise-grid"></div>
+            `;
+            
+            const expertises = [
+                { name: "HT/LT Cables", icon: "zap", img: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&q=80&w=800" },
+                { name: "Solar Systems", icon: "sun", img: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=800" },
+                { name: "Raw Materials", icon: "factory", img: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800" }
+            ];
 
-                    {/* Content Routing */}
-                    {view === 'home' && (
-                        <div className="relative h-[450px] flex items-center justify-center text-white text-center">
-                            <img src="https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=1500" 
-                                 className="absolute inset-0 w-full h-full object-cover brightness-50" />
-                            <div className="relative z-10 px-6">
-                                <h2 className="text-5xl font-black mb-4 uppercase italic">Pioneering Power</h2>
-                                <p className="text-lg mb-8 opacity-90">HT/LT Infrastructure & Engineering Raw Materials</p>
-                                <button onClick={() => setView('quote')} className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest transition-transform hover:scale-105">
-                                    Request Quotation
-                                </button>
-                            </div>
+            const grid = document.getElementById('expertise-grid');
+            expertises.forEach(ex => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:-translate-y-2 transition-all duration-300">
+                        <img src="${ex.img}" class="h-48 w-full object-cover">
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold mb-2">${ex.name}</h3>
+                            <button onclick="showView('quote')" class="text-blue-600 font-bold text-sm">Learn More →</button>
                         </div>
-                    )}
+                    </div>
+                `;
+            });
+        }
 
-                    {view === 'quote' && (
-                        <div className="max-w-xl mx-auto py-12 px-6">
-                            <form className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100" 
-                                  onSubmit={async (e) => {
-                                      e.preventDefault();
-                                      const data = {
-                                          client: e.target.client.value,
-                                          phone: e.target.phone.value,
-                                          details: e.target.details.value,
-                                          date: new Date().toLocaleString(),
-                                          status: 'Pending'
-                                      };
-                                      await db.collection('orders').add(data);
-                                      alert("Request Sent Successfully!");
-                                      setView('track');
-                                  }}>
-                                <h3 className="text-2xl font-black mb-6 italic">Quotation Form</h3>
-                                <input name="client" placeholder="Company/Client Name" required className="w-full p-4 mb-4 bg-slate-50 border rounded-xl focus:ring-2
+        function renderAbout() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="max-w-3xl mx-auto py-10 text-center">
+                    <h2 class="text-4xl font-black mb-4">About PriyaElectrical</h2>
+                    <p class="text-slate-600 leading-relaxed mb-8">We are a verified industrial electrical vendor specializing in high-tension infrastructure and smart grid solutions.</p>
+                    <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 text-left">
+                        <div class="flex items-center gap-4 mb-4"><i data-lucide="phone" class="text-blue-600"></i> <span>8147267247</span></div>
+                        <div class="flex items-center gap-4"><i data-lucide="mail" class="text-blue-600"></i> <span>Raju@#324@gmail.com</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderForm(type) {
+            const isMaterial = type === 'material';
+            document.getElementById('app-content').innerHTML = `
+                <div class="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100">
+                    <h2 class="text-3xl font-black mb-6">${isMaterial ? 'Material Sourcing' : 'Project Quotation'}</h2>
+                    <form onsubmit="handleFormSubmit(event, '${type}')" class="space-y-6">
+                        <input id="f-name" placeholder="Name" required class="w-full p-4 bg-slate-50 border rounded-2xl">
+                        <input id="f-phone" placeholder="Phone" required class="w-full p-4 bg-slate-50 border rounded-2xl">
+                        <input id="f-item" placeholder="Required Item" required class="w-full p-4 bg-slate-50 border rounded-2xl">
+                        <textarea id="f-details" placeholder="Specific Requirements" class="w-full p-4 bg-slate-50 border rounded-2xl"></textarea>
+                        <button class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all">Submit Request</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function handleFormSubmit(e, type) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                name: document.getElementById('f-name').value,
+                phone: document.getElementById('f-phone').value,
+                item: document.getElementById('f-item').value,
+                details: document.getElementById('f-details').value,
+                status: 'pending',
+                timestamp: new Date().toISOString()
+            };
+            if (type === 'quote') data.orders.push(newItem);
+            else data.materials.push(newItem);
+            saveData();
+            showView('track');
+        }
+
+        function renderTrack() {
+            const all = [...data.orders, ...data.materials].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            let html = `<h2 class="text-2xl font-bold mb-6">Request Tracking</h2><div class="space-y-4">`;
+            
+            if (all.length === 0) html += `<p class="text-slate-400">No requests found.</p>`;
+            
+            all.forEach(item => {
+                html += `
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
+                        <div>
+                            <h3 class="font-bold text-slate-800">${item.item}</h3>
+                            <p class="text-xs text-slate-500">${new Date(item.timestamp).toLocaleDateString()}</p>
+                        </div>
+                        <span class="px-4 py-1 rounded-full text-[10px] font-black uppercase ${item.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${item.status}</span>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            document.getElementById('app-content').innerHTML = html;
+        }
+
+        // --- Admin Panel Logic ---
+        function renderAdmin() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="grid lg:grid-cols-4 gap-8">
+                    <div class="lg:col-span-3 space-y-8">
+                        <div id="material-list"></div>
+                        <div id="quote-list"></div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <div class="bg-slate-900 text-white p-8 rounded-[2rem] shadow-xl">
+                            <h3 class="font-black text-xl mb-6">GST Billing</h3>
+                            <input id="b-client" placeholder="Client Name" class="w-full bg-white/10 p-4 rounded-xl mb-4 outline-none border border-white/10">
+                            <input id="b-amt" type="number" placeholder="Base Amount" class="w-full bg-white/10 p-4 rounded-xl mb-4 outline-none border border-white/10">
+                            <select id="b-rate" class="w-full bg-white/10 p-4 rounded-xl mb-6 outline-none border border-white/10">
+                                <option value="18" class="text-black">18% Standard</option>
+                                <option value="12" class="text-black">12% Equipment</option>
+                            </select>
+                            <button onclick="previewInvoice()" class="w-full bg-blue-600 py-4 rounded-xl font-bold uppercase text-xs tracking-widest">Preview Invoice</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            renderTable('material-list', data.materials, 'Raw Materials', 'material');
+            renderTable('quote-list', data.orders, 'Quotations', 'quote');
+            lucide.createIcons();
+        }
+
+        function renderTable(containerId, items, title, type) {
+            let html = `
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 p-6 border-b font-black text-sm uppercase tracking-widest">${title} (${items.length})</div>
+                    <table class="w-full text-left text-sm">
+                        <tbody class="divide-y">
+            `;
+            items.forEach(i => {
+                html += `
+                    <tr>
+                        <td class="p-6"><div class="font-bold">${i.name}</div><div class="text-xs text-slate-400">${i.phone}</div></td>
+                        <td class="p-6">${i.item}</td>
+                        <td class="p-6 text-right">
+                            <button onclick="updateStatus('${i.id}', 'approved', '${type}')" class="p-2 bg-green-50 text-green-600 rounded-lg mr-2"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                            <button onclick="deleteItem('${i.id}', '${type}')" class="p-2 bg-red-50 text-red-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        function updateStatus(id, status, type) {
+            const list = type === 'quote' ? data.orders : data.materials;
+            const idx = list.findIndex(i => i.id == id);
+            list[idx].status = status;
+            saveData();
+        }
+
+        function deleteItem(id, type) {
+            if (type === 'quote') data.orders = data.orders.filter(i => i.id != id);
+            else data.materials = data.materials.filter(i => i.id != id);
+            saveData();
+        }
+
+        function previewInvoice() {
+            const client = document.getElementById('b-client').value || 'Valued Client';
+            const amt = parseFloat(document.getElementById('b-amt').value || 0);
+            const rate = parseInt(document.getElementById('b-rate').value);
+            const gst = (amt * rate / 100).toFixed(2);
+            const total = (amt + parseFloat(gst)).toFixed(2);
+            const invNo = 'INV-' + Math.floor(Math.random()*90000);
+
+            const modal = document.getElementById('invoiceModal');
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl">
+                    <div class="p-10" id="printable-bill">
+                        <div class="flex justify-between mb-12">
+                            <div><h1 class="text-3xl font-black">INVOICE</h1><p class="text-slate-400 font-bold">${invNo}</p></div>
+                            <div class="text-right font-bold"><span class="text-blue-600">PriyaElectrical</span><br><small>8147267247</small></div>
+                        </div>
+                        <div class="mb-10">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Billed To</h4>
+                            <p class="font-black text-lg">${client}</p>
+                        </div>
+                        <div class="border-t py-6 space-y-2">
+                            <div class="flex justify-between"><span>Base Amount</span><span>₹${amt.toLocaleString()}</span></div>
+                            <div class="flex justify-between text-slate-400 italic"><span>GST (${rate}%)</span><span>₹${gst}</span></div>
+                            <div class="flex justify-between text-2xl font-black border-t pt-4"><span>Total</span><span>₹${total}</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-6 flex gap-4">
+                        <button onclick="downloadPDF('${invNo}')" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold">Download PDF</button>
+                        <button onclick="document.getElementById('invoiceModal').classList.add('hidden')" class="flex-1 bg-slate-200 py-4 rounded-xl font-bold">Close</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function downloadPDF(filename) {
+            const element = document.getElementById('printable-bill');
+            html2pdf().from(element).save(`${filename}.pdf`);
+        }
+
+        // Initialize
+        showView('home');
+    </script>
+</body>
+</html>
